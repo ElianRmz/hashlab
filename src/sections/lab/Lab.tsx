@@ -69,7 +69,7 @@ export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; ini
               exit={{ opacity: 0, transform: "translateY(-30%)", transition: { duration: 0.15, ease: brand.motion.ease } }}
             >
               <Tagline lead={m.lead} accent={m.accent} tone="redMuted" className="text-[clamp(1.25rem,2vw,2rem)] sm:text-[clamp(1.25rem,2vw,2rem)]" />
-              <h2 className="whitespace-nowrap font-display text-[min(clamp(2.5rem,6vw,6rem),12cqi)] font-extrabold uppercase leading-[0.9] tracking-[-0.04em] text-red">
+              <h2 className="whitespace-nowrap font-display text-[min(clamp(2.5rem,6vw,6rem),11cqi)] font-extrabold uppercase leading-[0.9] tracking-[-0.04em] text-red">
                 {m.label}
               </h2>
             </motion.div>

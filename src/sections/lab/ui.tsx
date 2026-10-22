@@ -46,13 +46,11 @@ export function PasswordInput({ className, ...props }: Omit<ComponentPropsWithou
   const [visible, setVisible] = useState(true);
   return (
     <div className="relative min-w-0">
-      <TextInput {...props} type={visible ? "text" : "password"} className={cn("pr-28", className)} />
+      <TextInput {...props} type={visible ? "text" : "password"} spellCheck={false} autoCorrect="off" autoCapitalize="off" className={cn("pr-28", className)} />
       <button
         type="button"
         aria-controls={props.id}
-        aria-pressed={visible}
         aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
-        disabled={props.disabled}
         onClick={() => setVisible((current) => !current)}
         className="absolute inset-y-1 right-1 cursor-pointer px-3 font-serif text-sm uppercase text-red hover:bg-red hover:text-ink focus-visible:outline-2 focus-visible:outline-red focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
       >
