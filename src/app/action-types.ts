@@ -1,7 +1,8 @@
 import type { PasswordAlgoId } from "@/hash/algorithms";
 import type { PasswordHashResult, PasswordVerifyResult, RecordPart } from "@/hash/contract";
 
-export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string; field?: string };
+export type FieldName = "algo" | "mode" | "text" | "file" | "reference" | "message" | "signature" | "username" | "password";
+export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string; field?: FieldName };
 export type ActionError = Extract<ActionResult<never>, { ok: false }>;
 
 export type UserView = {

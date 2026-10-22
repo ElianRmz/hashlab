@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { digestAction, referenceAction } from "@/app/actions";
-import { FILE_ERROR, FILE_LIMIT } from "@/app/validation";
+import { parseFile } from "@/app/validation";
 import { DIGEST_ALGOS, type DigestAlgoId } from "@/hash/algorithms";
 import type { DigestResult } from "@/hash/contract";
 import { Digest } from "./Digest";
@@ -33,8 +33,9 @@ export function IntegrityPanel() {
 
   function calculate() {
     setComparison(null);
-    if (input.mode === "file" && (!input.file || input.file.size < 1 || input.file.size > FILE_LIMIT)) {
-      compute.setError({ ok: false, error: FILE_ERROR, field: "file" });
+    const file = input.mode === "file" ? parseFile(input.file) : null;
+    if (file && !file.ok) {
+      compute.setError(file);
       return;
     }
     const form = new FormData();

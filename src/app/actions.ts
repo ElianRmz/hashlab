@@ -1,47 +1,24 @@
 "use server";
 
-import { DIGEST_ALGOS, PASSWORD_ALGOS, type DigestAlgoId, type PasswordAlgoId } from "@/hash/algorithms";
 import type { DigestResult, PublicKeyInfo, SignResult, VerifyResult } from "@/hash/contract";
 import { BCRYPT_MAX_PASSWORD_BYTES } from "@/hash/params";
 import { digest, hashPassword, publicKey, sign, splitRecord, verify, verifyPassword } from "@/hash/server";
 import type { ActionResult, LoginResult, RegistrationResult, UserView } from "./action-types";
 import { LOCKOUT_POLICY, users } from "./users";
-import { FILE_LIMIT, FILE_ERROR } from "./validation";
+import {
+  parseContent,
+  parseDigestAlgo,
+  parseMessage,
+  parseNewPassword,
+  parsePassword,
+  parsePasswordAlgo,
+  parseReference,
+  parseSignature,
+  parseUsername,
+} from "./validation";
 
-function isDigestAlgo(value: unknown): value is DigestAlgoId {
-  return typeof value === "string" && Object.hasOwn(DIGEST_ALGOS, value);
-}
-
-function isPasswordAlgo(value: unknown): value is PasswordAlgoId {
-  return typeof value === "string" && Object.hasOwn(PASSWORD_ALGOS, value);
-}
-
-function fail(error: string, field?: string): ActionResult<never> {
-  return { ok: false, error, ...(field ? { field } : {}) };
-}
-
-function textInput(value: unknown, max: number, field: string): ActionResult<string> {
-  if (typeof value !== "string" || value.length < 1 || value.length > max) {
-    return fail(`Escribe entre 1 y ${max.toLocaleString("es-MX")} caracteres`, field);
-  }
-  return { ok: true, data: value };
-}
-
-function usernameInput(value: unknown): ActionResult<string> {
-  if (typeof value !== "string" || !/^[a-zA-Z0-9._-]{3,32}$/.test(value)) {
-    return fail("Usa de 3 a 32 caracteres: letras, números, punto, guion o guion bajo", "username");
-  }
-  return { ok: true, data: value };
-}
-
-function passwordInput(value: unknown, algo?: PasswordAlgoId): ActionResult<string> {
-  if (typeof value !== "string" || value.length < 8 || value.length > 128) {
-    return fail("La contraseña debe tener entre 8 y 128 caracteres", "password");
-  }
-  if (algo === "bcrypt" && Buffer.byteLength(value, "utf8") > BCRYPT_MAX_PASSWORD_BYTES) {
-    return fail("Usa como máximo 72 bytes UTF-8: bcrypt ignora lo que pase de 72 bytes", "password");
-  }
-  return { ok: true, data: value };
+function fail(error: string): ActionResult<never> {
+  return { ok: false, error };
 }
 
 async function execute<T>(work: () => T | Promise<T>): Promise<ActionResult<T>> {
@@ -53,36 +30,25 @@ async function execute<T>(work: () => T | Promise<T>): Promise<ActionResult<T>> 
 }
 
 export async function digestAction(form: FormData): Promise<ActionResult<DigestResult>> {
-  const algo = form.get("algo");
-  if (!isDigestAlgo(algo)) return fail("Selecciona un algoritmo hash válido", "algo");
-  const mode = form.get("mode");
-  if (mode === "text") {
-    const text = textInput(form.get("text"), 100_000, "text");
-    if (!text.ok) return text;
-    return execute(() => digest(algo, new TextEncoder().encode(text.data)));
-  }
-  if (mode !== "file") return fail("Selecciona texto o archivo", "mode");
-  const file = form.get("file");
-  if (!(file instanceof File) || file.size < 1 || file.size > FILE_LIMIT) {
-    return fail(FILE_ERROR, "file");
-  }
-  return execute(async () => digest(algo, new Uint8Array(await file.arrayBuffer())));
+  const algo = parseDigestAlgo(form.get("algo"));
+  if (!algo.ok) return algo;
+  const content = parseContent(form.get("mode"), form.get("text"), form.get("file"));
+  if (!content.ok) return content;
+  const { data } = content;
+  return execute(async () => digest(algo.data, data.mode === "text" ? new TextEncoder().encode(data.text) : new Uint8Array(await data.file.arrayBuffer())));
 }
 
 export async function referenceAction(form: FormData): Promise<ActionResult<{ reference: string; matches: boolean | null }>> {
-  const algo = form.get("algo");
-  if (!isDigestAlgo(algo)) return fail("Selecciona un algoritmo hash válido", "algo");
-  const raw = form.get("reference");
-  const reference = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-  const expected = DIGEST_ALGOS[algo].bits / 4;
-  if (!/^[0-9a-f]+$/.test(reference) || reference.length !== expected) {
-    return fail(`No es un hash ${DIGEST_ALGOS[algo].label} válido (se esperan ${expected} caracteres hex)`, "reference");
-  }
+  const algo = parseDigestAlgo(form.get("algo"));
+  if (!algo.ok) return algo;
+  const reference = parseReference(form.get("reference") ?? "", algo.data);
+  if (!reference.ok) return reference;
   const hex = form.get("hex");
+  const expected = reference.data?.length ?? 0;
   if (hex !== null && (typeof hex !== "string" || !/^[0-9a-f]+$/.test(hex) || hex.length !== expected)) {
-    return fail("Vuelve a calcular el hash antes de comparar", "reference");
+    return { ok: false, error: "Vuelve a calcular el hash antes de comparar", field: "reference" };
   }
-  return { ok: true, data: { reference, matches: hex === null ? null : reference === hex } };
+  return { ok: true, data: { reference: reference.data ?? "", matches: hex === null ? null : reference.data === hex } };
 }
 
 export async function publicKeyAction(): Promise<ActionResult<PublicKeyInfo>> {
@@ -90,23 +56,21 @@ export async function publicKeyAction(): Promise<ActionResult<PublicKeyInfo>> {
 }
 
 export async function signAction(form: FormData): Promise<ActionResult<SignResult>> {
-  const algo = form.get("algo");
-  if (!isDigestAlgo(algo)) return fail("Selecciona un algoritmo hash válido", "algo");
-  const message = textInput(form.get("message"), 10_000, "message");
+  const algo = parseDigestAlgo(form.get("algo"));
+  if (!algo.ok) return algo;
+  const message = parseMessage(form.get("message"));
   if (!message.ok) return message;
-  return execute(() => sign(algo, message.data));
+  return execute(() => sign(algo.data, message.data));
 }
 
 export async function verifySignatureAction(form: FormData): Promise<ActionResult<VerifyResult>> {
-  const algo = form.get("algo");
-  if (!isDigestAlgo(algo)) return fail("Selecciona un algoritmo hash válido", "algo");
-  const message = textInput(form.get("message"), 10_000, "message");
+  const algo = parseDigestAlgo(form.get("algo"));
+  if (!algo.ok) return algo;
+  const message = parseMessage(form.get("message"));
   if (!message.ok) return message;
-  const signature = form.get("signature");
-  if (typeof signature !== "string" || signature.length === 0 || signature.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(signature) || Buffer.from(signature, "base64").toString("base64") !== signature) {
-    return fail("Introduce una firma base64 válida", "signature");
-  }
-  return execute(() => verify(algo, message.data, signature));
+  const signature = parseSignature(form.get("signature"));
+  if (!signature.ok) return signature;
+  return execute(() => verify(algo.data, message.data, signature.data));
 }
 
 function userViews(): UserView[] {
@@ -120,17 +84,19 @@ export async function listUsersAction(): Promise<ActionResult<UserView[]>> {
 }
 
 export async function registerAction(form: FormData): Promise<ActionResult<RegistrationResult>> {
-  const algo = form.get("algo");
-  if (!isPasswordAlgo(algo)) return fail("Selecciona un algoritmo de contraseña válido", "algo");
-  const username = usernameInput(form.get("username"));
+  const parsedAlgo = parsePasswordAlgo(form.get("algo"));
+  if (!parsedAlgo.ok) return parsedAlgo;
+  const algo = parsedAlgo.data;
+  const username = parseUsername(form.get("username"));
   if (!username.ok) return username;
-  const password = passwordInput(form.get("password"), algo);
+  const password = parseNewPassword(form.get("password"), algo);
   if (!password.ok) return password;
   const key = username.data.toLowerCase();
-  if (users.has(key)) return fail("Este usuario ya está registrado", "username");
+  const taken: ActionResult<never> = { ok: false, error: "Este usuario ya está registrado", field: "username" };
+  if (users.has(key)) return taken;
   try {
     const hash = await hashPassword(algo, password.data);
-    if (users.has(key)) return fail("Este usuario ya está registrado", "username");
+    if (users.has(key)) return taken;
     users.set(key, { username: username.data, algo, record: hash.record, createdAt: Date.now(), failedAttempts: 0, lockedUntil: 0 });
     return { ok: true, data: { hash, username: username.data, users: userViews() } };
   } catch {
@@ -150,9 +116,9 @@ async function dummyRecord(): Promise<string> {
 }
 
 export async function loginAction(form: FormData): Promise<ActionResult<LoginResult>> {
-  const username = usernameInput(form.get("username"));
+  const username = parseUsername(form.get("username"));
   if (!username.ok) return username;
-  const password = passwordInput(form.get("password"));
+  const password = parsePassword(form.get("password"));
   if (!password.ok) return password;
   const user = users.get(username.data.toLowerCase());
   const locked = (): LoginResult => ({
