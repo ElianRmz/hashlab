@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { sha256crypt } from "./sha256crypt.ts";
+import { hashPassword } from "./passwords.ts";
+import { sha256crypt, sha256cryptAsync } from "./sha256crypt.ts";
 
 // Tabla tests2[] de la especificación, copiada textualmente.
 const SPEC_VECTORS: [setting: string, input: string, expected: string][] = [
@@ -51,5 +52,24 @@ describe("sha256crypt: vectores de la especificación", () => {
   it("la contraseña se mide en bytes UTF-8", () => {
     assert.notEqual(sha256crypt("ñ", "$5$rounds=1000$sal"), sha256crypt("n", "$5$rounds=1000$sal"));
     assert.equal(sha256crypt("ñ", "$5$rounds=1000$sal"), sha256crypt("ñ", "$5$rounds=1000$sal"));
+  });
+});
+
+describe("sha256crypt por lotes", () => {
+  it("la variante asíncrona da el mismo registro en cada vector", async () => {
+    for (const [setting, input, expected] of SPEC_VECTORS) {
+      assert.equal(await sha256cryptAsync(input, setting), expected);
+    }
+  });
+
+  it("un temporizador sigue corriendo mientras hashPassword('sha256crypt') trabaja", async () => {
+    let ticks = 0;
+    const timer = setInterval(() => ticks++, 1);
+    try {
+      await hashPassword("sha256crypt", "contraseña de prueba");
+    } finally {
+      clearInterval(timer);
+    }
+    assert.ok(ticks >= 10, `el temporizador solo corrió ${ticks} veces`);
   });
 });

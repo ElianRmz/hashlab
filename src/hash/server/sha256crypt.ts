@@ -11,6 +11,8 @@ const ROUNDS_DEFAULT = 5000;
 const ROUNDS_MIN = 1000;
 const ROUNDS_MAX = 999_999_999;
 const SALT_MAX_CHARS = 16;
+// Cada lote tarda unos 5 ms; ceder entre lotes deja al servidor atender otras peticiones.
+const ROUNDS_PER_YIELD = 10_000;
 
 type Setting = { rounds: number; roundsCustom: boolean; salt: string };
 
@@ -53,9 +55,8 @@ function digestA(key: Buffer, salt: Buffer, B: Buffer): Buffer {
   return a.digest();
 }
 
-function stretch(A: Buffer, P: Buffer, S: Buffer, rounds: number): Buffer {
-  let C = A;
-  for (let round = 0; round < rounds; round++) {
+function stretch(C: Buffer, P: Buffer, S: Buffer, from: number, to: number): Buffer {
+  for (let round = from; round < to; round++) {
     const odd = round % 2 === 1;
     const h = createHash("sha256");
     h.update(odd ? P : C);
@@ -83,16 +84,36 @@ function encodeDigest(C: Buffer): string {
   return groups.join("") + crypt64((C[31] << 8) | C[30], 3);
 }
 
-export function sha256crypt(password: string, setting: string): string {
-  const { rounds, roundsCustom, salt } = parseSetting(setting);
+function prepare(password: string, setting: string) {
+  const parsed = parseSetting(setting);
   const key = Buffer.from(password, "utf8");
-  const saltBytes = Buffer.from(salt, "utf8");
+  const saltBytes = Buffer.from(parsed.salt, "utf8");
   const B = sha256(key, saltBytes, key);
   const A = digestA(key, saltBytes, B);
   const P = repeatTo(sha256Repeated(key, key.length), key.length);
   const S = repeatTo(sha256Repeated(saltBytes, 16 + A[0]), saltBytes.length);
-  const C = stretch(A, P, S, rounds);
+  return { ...parsed, A, P, S };
+}
+
+function format({ rounds, roundsCustom, salt }: Setting, C: Buffer): string {
   return `$5$${roundsCustom ? `rounds=${rounds}$` : ""}${salt}$${encodeDigest(C)}`;
+}
+
+export function sha256crypt(password: string, setting: string): string {
+  const prepared = prepare(password, setting);
+  const { A, P, S, rounds } = prepared;
+  return format(prepared, stretch(A, P, S, 0, rounds));
+}
+
+export async function sha256cryptAsync(password: string, setting: string): Promise<string> {
+  const prepared = prepare(password, setting);
+  const { P, S, rounds } = prepared;
+  let C = prepared.A;
+  for (let from = 0; from < rounds; from += ROUNDS_PER_YIELD) {
+    C = stretch(C, P, S, from, Math.min(from + ROUNDS_PER_YIELD, rounds));
+    await new Promise(setImmediate);
+  }
+  return format(prepared, C);
 }
 
 // 256 es múltiplo de 64, así que byte & 63 reparte los 64 símbolos sin sesgo.
@@ -101,6 +122,6 @@ const randomSalt = () => Array.from(randomBytes(SALT_MAX_CHARS), (byte) => CRYPT
 export const sha256cryptScheme = defineScheme({
   id: "sha256crypt",
   pattern: /^(\$5\$)(rounds=\d+\$)?([^$]{1,16}\$)([./0-9A-Za-z]{43})$/,
-  hash: async (password) => sha256crypt(password, `$5$rounds=${SHA256CRYPT_ROUNDS}$${randomSalt()}`),
-  verify: async (record, password) => safeEqual(Buffer.from(sha256crypt(password, record)), Buffer.from(record)),
+  hash: (password) => sha256cryptAsync(password, `$5$rounds=${SHA256CRYPT_ROUNDS}$${randomSalt()}`),
+  verify: async (record, password) => safeEqual(Buffer.from(await sha256cryptAsync(password, record)), Buffer.from(record)),
 });
