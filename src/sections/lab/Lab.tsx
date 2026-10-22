@@ -11,6 +11,7 @@ import type { PublicKeyInfo } from "@/hash/contract";
 import { IntegrityPanel } from "./IntegrityPanel";
 import { SignaturePanel } from "./SignaturePanel";
 import { PasswordPanel } from "./PasswordPanel";
+import { FittedHeading } from "./FittedHeading";
 
 const pane: Variants = {
   hidden: { opacity: 0, transform: "translateY(10px)", transition: { duration: 0 } },
@@ -60,7 +61,7 @@ export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; ini
   return (
     <Section id="lab" aria-label="Laboratorio de hash" className="scroll-mt-0 bg-ink/70 py-16 backdrop-blur-[2px] sm:py-24">
       <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_minmax(0,28rem)] lg:items-end">
-        <div className="@container overflow-hidden">
+        <div className="@container -my-8 flow-root overflow-x-visible overflow-y-clip py-8">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={mode}
@@ -69,9 +70,7 @@ export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; ini
               exit={{ opacity: 0, transform: "translateY(-30%)", transition: { duration: 0.15, ease: brand.motion.ease } }}
             >
               <Tagline lead={m.lead} accent={m.accent} tone="redMuted" className="text-[clamp(1.25rem,2vw,2rem)] sm:text-[clamp(1.25rem,2vw,2rem)]" />
-              <h2 className="whitespace-nowrap font-display text-[min(clamp(2.5rem,6vw,6rem),11cqi)] font-extrabold uppercase leading-[0.9] tracking-[-0.04em] text-red">
-                {m.label}
-              </h2>
+              <FittedHeading label={m.label} />
             </motion.div>
           </AnimatePresence>
         </div>
