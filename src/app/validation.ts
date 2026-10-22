@@ -20,6 +20,7 @@ export type Content = { mode: "text"; text: string } | { mode: "file"; file: Fil
 const valid = <T>(data: T): ActionResult<T> => ({ ok: true, data });
 const invalid = (field: FieldName, error: string): ActionError => ({ ok: false, error, field });
 const codePoints = (value: string) => [...value].length;
+const normalizeLineBreaks = (value: unknown) => typeof value === "string" ? value.replace(/\r\n/g, "\n") : value;
 const number = (value: number) => value.toLocaleString("es-MX");
 
 function oneOf<K extends string>(table: Record<K, unknown>, value: unknown): value is K {
@@ -42,12 +43,12 @@ export function parsePasswordAlgo(value: unknown): ActionResult<PasswordAlgoId> 
 
 export function parseText(value: unknown): ActionResult<string> {
   const { min, max } = LIMITS.text;
-  return bounded(value, "text", LIMITS.text, `Escribe entre ${number(min)} y ${number(max)} caracteres`);
+  return bounded(normalizeLineBreaks(value), "text", LIMITS.text, `Escribe entre ${number(min)} y ${number(max)} caracteres`);
 }
 
 export function parseMessage(value: unknown): ActionResult<string> {
   const { min, max } = LIMITS.message;
-  return bounded(value, "message", LIMITS.message, `Escribe entre ${number(min)} y ${number(max)} caracteres`);
+  return bounded(normalizeLineBreaks(value), "message", LIMITS.message, `Escribe entre ${number(min)} y ${number(max)} caracteres`);
 }
 
 export function parseUsername(value: unknown): ActionResult<string> {
