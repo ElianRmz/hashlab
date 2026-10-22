@@ -1,10 +1,11 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { listUsersAction, publicKeyAction } from "./actions";
 import { DitherBackground } from "@/components/background/DitherBackground";
 import { DiagonalBars } from "@/brand";
 import { Hero } from "@/sections/hero/Hero";
 import { Lab } from "@/sections/lab/Lab";
+import { publicKey } from "@/hash/server";
+import { userViews } from "./users";
 
 export default function Home() {
   return (
@@ -23,7 +24,5 @@ export default function Home() {
 
 async function LiveLab() {
   await connection();
-  const publicKey = await publicKeyAction();
-  const initialUsers = await listUsersAction();
-  return <Lab publicKey={publicKey} initialUsers={initialUsers} />;
+  return <Lab publicKey={publicKey()} initialUsers={userViews()} />;
 }

@@ -1,7 +1,7 @@
 "use server";
 
-import type { PublicKeyInfo, SignResult, VerifyResult } from "@/hash/contract";
-import { digest, publicKey, sign, verify } from "@/hash/server";
+import type { SignResult, VerifyResult } from "@/hash/contract";
+import { digest, sign, verify } from "@/hash/server";
 import type { ActionResult, IntegrityResult, LoginResult, RegistrationResult } from "./action-types";
 import { authenticate, register, userViews, type AuthOutcome, type UserView } from "./users";
 import {
@@ -44,10 +44,6 @@ export async function digestAction(form: FormData): Promise<ActionResult<Integri
     const hash = digest(algo.data, await bytesOf(content.data));
     return { hash, matches: reference.data === null ? null : reference.data === hash.hex };
   });
-}
-
-export async function publicKeyAction(): Promise<ActionResult<PublicKeyInfo>> {
-  return execute(publicKey);
 }
 
 export async function signAction(form: FormData): Promise<ActionResult<SignResult>> {

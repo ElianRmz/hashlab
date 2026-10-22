@@ -6,7 +6,6 @@ import { brand, Tagline } from "@/brand";
 import { Section } from "@/components/layout/Section";
 import { cn } from "@/lib/cn";
 import { MODE_ORDER, MODES, type Mode } from "@/hash/algorithms";
-import type { ActionResult } from "@/app/action-types";
 import type { UserView } from "@/app/users";
 import type { PublicKeyInfo } from "@/hash/contract";
 import { IntegrityPanel } from "./IntegrityPanel";
@@ -49,9 +48,7 @@ function Tabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
   );
 }
 
-export function Lab({ publicKey, initialUsers }: {
-  publicKey: ActionResult<PublicKeyInfo>; initialUsers: ActionResult<UserView[]>;
-}) {
+export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; initialUsers: UserView[] }) {
   const [mode, setMode] = useState<Mode>("integridad");
   const m = MODES[mode];
 

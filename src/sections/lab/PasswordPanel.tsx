@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { listUsersAction, loginAction, registerAction } from "@/app/actions";
-import type { ActionResult, LoginResult, RegistrationResult } from "@/app/action-types";
+import type { LoginResult, RegistrationResult } from "@/app/action-types";
 import type { UserView } from "@/app/users";
 import { PASSWORD_ALGOS, type PasswordAlgoId } from "@/hash/algorithms";
 import { Button, Chips, Field, Panel, TextInput, Verdict, type VerdictState } from "./ui";
@@ -23,12 +23,12 @@ function loginVerdict(result: LoginResult, remaining: number): VerdictState {
   }
 }
 
-export function PasswordPanel({ initialUsers }: { initialUsers: ActionResult<UserView[]> }) {
+export function PasswordPanel({ initialUsers }: { initialUsers: UserView[] }) {
   const [algo, setAlgo] = useState<PasswordAlgoId>("bcrypt");
   const [username, setUsername] = useState("elian.ramirez");
   const [password, setPassword] = useState("Cazador2026!");
   const [stored, setStored] = useState<RegistrationResult | null>(null);
-  const [users, setUsers] = useState(initialUsers.ok ? initialUsers.data : []);
+  const [users, setUsers] = useState(initialUsers);
   const [loginUsername, setLoginUsername] = useState("");
   const [attempt, setAttempt] = useState("");
   const [login, setLogin] = useState<LoginResult | null>(null);
@@ -121,7 +121,7 @@ export function PasswordPanel({ initialUsers }: { initialUsers: ActionResult<Use
         <Button disabled={listing.pending || pending} className="self-start" onClick={() => listing.run(listUsersAction, setUsers)}>
           {listing.pending ? "Calculando…" : "Actualizar lista"}
         </Button>
-        <TaskError error={listing.error ?? (initialUsers.ok ? null : initialUsers)} />
+        <TaskError error={listing.error} />
         {users.length ? <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] table-fixed text-left">
             <caption className="sr-only">Usuarios, algoritmos, registros hash y fecha de creación</caption>

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { signAction, verifySignatureAction } from "@/app/actions";
-import type { ActionResult } from "@/app/action-types";
 import { DIGEST_ALGOS, type DigestAlgoId } from "@/hash/algorithms";
 import type { PublicKeyInfo, SignResult, VerifyResult } from "@/hash/contract";
 import { Digest } from "./Digest";
@@ -11,7 +10,7 @@ import { fieldError, Meta, milliseconds, TaskError, useServerTask } from "./shar
 
 const options = Object.values(DIGEST_ALGOS).map((a) => ({ id: a.id, label: a.label, sub: `${a.bits} BITS` }));
 
-export function SignaturePanel({ publicKey }: { publicKey: ActionResult<PublicKeyInfo> }) {
+export function SignaturePanel({ publicKey }: { publicKey: PublicKeyInfo }) {
   const [algo, setAlgo] = useState<DigestAlgoId>("sha384");
   const [message, setMessage] = useState("Autorizo el pago de $12,500.00 a la cuenta 4410.");
   const [signed, setSigned] = useState<SignResult | null>(null);
@@ -21,7 +20,7 @@ export function SignaturePanel({ publicKey }: { publicKey: ActionResult<PublicKe
   const signing = useServerTask<SignResult>();
   const verifying = useServerTask<VerifyResult>();
   const pending = signing.pending || verifying.pending;
-  const key = signed?.publicKey ?? (publicKey.ok ? publicKey.data : null);
+  const key = signed?.publicKey ?? publicKey;
 
   function sign() {
     setVerdict(null);
@@ -66,7 +65,7 @@ export function SignaturePanel({ publicKey }: { publicKey: ActionResult<PublicKe
           <Digest value={signed?.digestHex ?? null} placeholder="— firma un mensaje" className="min-h-[2.5em]" />
           {signed && <Meta items={[["Algoritmo", DIGEST_ALGOS[signed.algo].label], ["Tiempo", milliseconds(signed.ms)]]} />}
         </div>
-        {key ? <div className="flex min-w-0 flex-col gap-3 border-t border-paper/10 pt-5">
+        <div className="flex min-w-0 flex-col gap-3 border-t border-paper/10 pt-5">
           <p className="font-serif text-sm uppercase text-paper-dim">Llave pública del servidor · {key.scheme} · {key.modulusBits} bits</p>
           <p className="font-serif text-sm text-paper-dim">Huella SHA-256</p>
           <p className="break-all font-mono text-sm">{key.fingerprintSha256}</p>
@@ -74,7 +73,7 @@ export function SignaturePanel({ publicKey }: { publicKey: ActionResult<PublicKe
             <summary className="cursor-pointer font-serif text-sm uppercase text-red">Ver llave pública PEM</summary>
             <pre className="mt-3 whitespace-pre-wrap break-all font-mono text-xs text-paper-dim">{key.publicKeyPem}</pre>
           </details>
-        </div> : <TaskError error={publicKey.ok ? null : publicKey} />}
+        </div>
       </Panel>
       <Panel title="Receptor · llave pública">
         <Field index="03" label="Mensaje recibido" htmlFor="received-message" error={fieldError(verifying.error, "message")}>
