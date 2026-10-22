@@ -1,31 +1,17 @@
 import "server-only";
-import type { DigestAlgoId, PasswordAlgoId } from "../algorithms.ts";
+import type { PasswordAlgoId } from "../algorithms.ts";
 import type {
   PasswordHashResult,
   PasswordVerifyResult,
-  PublicKeyInfo,
   RecordPart,
-  SignResult,
-  VerifyResult,
 } from "../contract.ts";
 
 export { digest } from "./digest.ts";
+export { publicKey, sign, verify } from "./signatures.ts";
 
 const pending = (name: string): never => {
   throw new Error(`${name} no implementado`);
 };
-
-export function publicKey(): PublicKeyInfo {
-  return pending("publicKey");
-}
-
-export function sign(algo: DigestAlgoId, message: string): SignResult {
-  return pending(`sign(${algo}, ${message.length})`);
-}
-
-export function verify(algo: DigestAlgoId, message: string, signatureB64: string): VerifyResult {
-  return pending(`verify(${algo}, ${message.length}, ${signatureB64.length})`);
-}
 
 export async function hashPassword(algo: PasswordAlgoId, password: string): Promise<PasswordHashResult> {
   return pending(`hashPassword(${algo}, ${password.length})`);
