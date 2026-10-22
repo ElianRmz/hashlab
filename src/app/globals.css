@@ -1,26 +1,71 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * UEDS — Tokens de marca (única fuente de verdad para el CSS).
+ * Espejados en TS en `src/brand/tokens.ts` para lógica/animación.
+ * Tailwind v4 genera utilidades a partir de cada token: --color-red → bg-red/text-red,
+ * --font-display → font-display, etc.
+ */
+@theme {
+  /* Paleta */
+  --color-ink: #0a0a0b;
+  --color-ink-soft: #131316;
+  --color-red: #ff0034;
+  --color-red-muted: #b21228;
+  --color-red-deep: #5a0410;
+  --color-paper: #ededed;
+  --color-paper-dim: #8a8a8e;
+
+  /* Tipografía (las CSS vars las inyecta next/font en <html>) */
+  --font-display: var(--font-sora), Arial, Helvetica, sans-serif;
+  --font-serif: var(--font-instrument), Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Motion */
+  --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-brand-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-red);
+  color: var(--color-ink);
+}
+
+/*
+ * Impresión de documentos del hub (.doc-root): papel blanco, tinta oscura,
+ * sin elementos decorativos, para que un doc entregado sea legible impreso/PDF.
+ */
+@media print {
+  html,
+  body {
+    background: #fff;
+    color: #111;
+  }
+  .doc-root {
+    max-width: none;
+    padding: 0;
+  }
+  .doc-root a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .doc-root form,
+  .doc-root svg {
+    display: none;
+  }
+  .doc-column {
+    gap: 2rem;
+  }
 }
