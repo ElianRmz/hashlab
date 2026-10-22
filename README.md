@@ -34,3 +34,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Limitaciones de la demostración
+
+bcryptjs usa CPU en el hilo principal de Node.js durante el hash y la verificación. Puede retrasar otras solicitudes. El suelo de tiempo para los accesos fallidos no elimina ese bloqueo.
+
+Los accesos fallidos tardan al menos 600 ms desde el inicio de la autenticación. Si la verificación supera ese tiempo por carga del servidor, la respuesta tarda más.
