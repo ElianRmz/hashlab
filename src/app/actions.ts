@@ -6,6 +6,7 @@ import { BCRYPT_MAX_PASSWORD_BYTES } from "@/hash/params";
 import { digest, hashPassword, publicKey, sign, splitRecord, verify, verifyPassword } from "@/hash/server";
 import type { ActionResult, LoginResult, RegistrationResult, UserView } from "./action-types";
 import { LOCKOUT_POLICY, users } from "./users";
+import { FILE_LIMIT, FILE_ERROR } from "./validation";
 
 function isDigestAlgo(value: unknown): value is DigestAlgoId {
   return typeof value === "string" && Object.hasOwn(DIGEST_ALGOS, value);
@@ -33,7 +34,7 @@ function usernameInput(value: unknown): ActionResult<string> {
   return { ok: true, data: value };
 }
 
-function passwordInput(value: unknown, algo: PasswordAlgoId): ActionResult<string> {
+function passwordInput(value: unknown, algo?: PasswordAlgoId): ActionResult<string> {
   if (typeof value !== "string" || value.length < 8 || value.length > 128) {
     return fail("La contraseña debe tener entre 8 y 128 caracteres", "password");
   }
@@ -62,8 +63,8 @@ export async function digestAction(form: FormData): Promise<ActionResult<DigestR
   }
   if (mode !== "file") return fail("Selecciona texto o archivo", "mode");
   const file = form.get("file");
-  if (!(file instanceof File) || file.size < 1 || file.size > 5 * 1024 * 1024) {
-    return fail("El archivo debe pesar entre 1 byte y 5 MB", "file");
+  if (!(file instanceof File) || file.size < 1 || file.size > FILE_LIMIT) {
+    return fail(FILE_ERROR, "file");
   }
   return execute(async () => digest(algo, new Uint8Array(await file.arrayBuffer())));
 }
@@ -102,7 +103,7 @@ export async function verifySignatureAction(form: FormData): Promise<ActionResul
   const message = textInput(form.get("message"), 10_000, "message");
   if (!message.ok) return message;
   const signature = form.get("signature");
-  if (typeof signature !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(signature) || signature.length === 0 || Buffer.from(signature, "base64").toString("base64") !== signature) {
+  if (typeof signature !== "string" || signature.length === 0 || signature.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(signature) || Buffer.from(signature, "base64").toString("base64") !== signature) {
     return fail("Introduce una firma base64 válida", "signature");
   }
   return execute(() => verify(algo, message.data, signature));
@@ -137,44 +138,46 @@ export async function registerAction(form: FormData): Promise<ActionResult<Regis
   }
 }
 
+async function dummyRecord(): Promise<string> {
+  // Both known and unknown users await the same cold-start work.
+  const dummy = globalThis.hashLabDummyRecord ??= hashPassword("bcrypt", "HashLab-dummy-credential").then((result) => result.record);
+  try {
+    return await dummy;
+  } catch (error) {
+    globalThis.hashLabDummyRecord = undefined;
+    throw error;
+  }
+}
+
 export async function loginAction(form: FormData): Promise<ActionResult<LoginResult>> {
   const username = usernameInput(form.get("username"));
   if (!username.ok) return username;
-  const user = users.get(username.data.toLowerCase());
-  const defaultAlgo = "bcrypt";
-  const password = passwordInput(form.get("password"), user?.algo ?? defaultAlgo);
+  const password = passwordInput(form.get("password"));
   if (!password.ok) return password;
-  const locked = (): ActionResult<LoginResult> => ({ ok: true, data: {
-    ok: false, algo: user?.algo ?? defaultAlgo, ms: 0, lockedUntil: user?.lockedUntil ?? 0,
-    message: `Cuenta bloqueada. Intenta en ${Math.ceil(((user?.lockedUntil ?? 0) - Date.now()) / 1000)} s`,
-  } });
-  if (user && user.lockedUntil > Date.now()) return locked();
+  const user = users.get(username.data.toLowerCase());
+  const locked = (): LoginResult => ({
+    kind: "locked", algo: user?.algo ?? "bcrypt", lockedUntil: user?.lockedUntil ?? 0,
+    message: "Cuenta bloqueada",
+  });
+  if (user && user.lockedUntil > Date.now()) return { ok: true, data: locked() };
   if (user && user.lockedUntil !== 0) {
     user.failedAttempts = 0;
     user.lockedUntil = 0;
   }
   return execute(async () => {
-    let record = user?.record;
-    if (!record) {
-      // Reuse the costly dummy so unknown users still perform password verification.
-      const dummy = globalThis.hashLabDummyRecord ??= hashPassword(defaultAlgo, "HashLab-dummy-credential").then((result) => result.record);
-      try {
-        record = await dummy;
-      } catch (error) {
-        globalThis.hashLabDummyRecord = undefined;
-        throw error;
-      }
-    }
-    const result = await verifyPassword(record, password.data);
-    if (user && user.lockedUntil > Date.now()) {
-      return { ...result, ok: false, lockedUntil: user.lockedUntil, message: `Cuenta bloqueada. Intenta en ${Math.ceil((user.lockedUntil - Date.now()) / 1000)} s` };
-    }
-    const valid = Boolean(user && result.ok);
+    const dummy = await dummyRecord();
+    const tooLong = (user?.algo ?? "bcrypt") === "bcrypt" && Buffer.byteLength(password.data, "utf8") > BCRYPT_MAX_PASSWORD_BYTES;
+    // bcrypt rejects oversized input immediately, so still do a full verification.
+    const result = await verifyPassword(user?.record ?? dummy, tooLong ? "HashLab-rejected-credential" : password.data);
+    if (user && user.lockedUntil > Date.now()) return locked();
+    const valid = Boolean(user && result.ok && !tooLong);
     if (user) {
       user.failedAttempts = valid ? 0 : user.failedAttempts + 1;
       if (user.failedAttempts >= LOCKOUT_POLICY.maxAttempts) user.lockedUntil = Date.now() + LOCKOUT_POLICY.lockMs;
     }
-    const lockedUntil = user?.lockedUntil ?? 0;
-    return { ...result, ok: valid, lockedUntil, message: valid ? "Acceso concedido" : lockedUntil > Date.now() ? `Cuenta bloqueada. Intenta en ${Math.ceil((lockedUntil - Date.now()) / 1000)} s` : "Usuario o contraseña incorrectos" };
+    return {
+      ...result, kind: "verified", ok: valid, lockedUntil: user?.lockedUntil ?? 0,
+      message: valid ? "Acceso concedido" : "Usuario o contraseña incorrectos",
+    };
   });
 }

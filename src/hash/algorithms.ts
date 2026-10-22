@@ -1,3 +1,5 @@
+import { BCRYPT_COST, PBKDF2, SHA256CRYPT_ROUNDS } from "./params.ts";
+
 export type DigestAlgoId = "sha256" | "sha384" | "sha512";
 export type PasswordAlgoId = "bcrypt" | "sha256crypt" | "pbkdf2";
 export type AlgoId = DigestAlgoId | PasswordAlgoId;
@@ -55,5 +57,3 @@ export const MODES: Record<Mode, { index: string; label: string; lead: string; a
 };
 
 export const MODE_ORDER: Mode[] = ["integridad", "firmas", "contrasenas"];
-import { BCRYPT_COST, PBKDF2, SHA256CRYPT_ROUNDS } from "./params";
-

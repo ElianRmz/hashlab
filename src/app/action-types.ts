@@ -13,4 +13,6 @@ export type UserView = {
 };
 
 export type RegistrationResult = { hash: PasswordHashResult; users: UserView[]; username: string };
-export type LoginResult = PasswordVerifyResult & { message: string; lockedUntil: number };
+export type LoginResult =
+  | (PasswordVerifyResult & { kind: "verified"; message: string; lockedUntil: number })
+  | { kind: "locked"; algo: PasswordAlgoId; message: string; lockedUntil: number };
