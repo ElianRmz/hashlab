@@ -1,19 +1,9 @@
-import type { PasswordAlgoId } from "@/hash/algorithms";
-import type { PasswordHashResult, PasswordVerifyResult, RecordPart } from "@/hash/contract";
+import type { PasswordHashResult } from "@/hash/contract";
+import type { AuthOutcome, UserView } from "./users";
 
 export type FieldName = "algo" | "mode" | "text" | "file" | "reference" | "message" | "signature" | "username" | "password";
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string; field?: FieldName };
 export type ActionError = Extract<ActionResult<never>, { ok: false }>;
 
-export type UserView = {
-  username: string;
-  algo: PasswordAlgoId;
-  record: string;
-  parts: RecordPart[];
-  createdAt: number;
-};
-
 export type RegistrationResult = { hash: PasswordHashResult; users: UserView[]; username: string };
-export type LoginResult =
-  | (PasswordVerifyResult & { kind: "verified"; message: string; lockedUntil: number })
-  | { kind: "locked"; algo: PasswordAlgoId; message: string; lockedUntil: number };
+export type LoginResult = AuthOutcome & { message: string };

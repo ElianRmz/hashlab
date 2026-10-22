@@ -16,12 +16,12 @@ type KeyPair = { privateKey: KeyObject; publicKey: KeyObject; info: PublicKeyInf
 
 // Next dev vuelve a evaluar este módulo en cada hot reload; globalThis sobrevive,
 // así que una firma emitida antes del reload sigue verificando después.
-const KEY_PAIR = Symbol.for("hashlab.rsaKeyPair");
-type KeyPairHost = typeof globalThis & { [KEY_PAIR]?: KeyPair };
+declare global {
+  var hashLabKeyPair: KeyPair | undefined;
+}
 
 function keyPair(): KeyPair {
-  const host = globalThis as KeyPairHost;
-  return (host[KEY_PAIR] ??= generateKeyPair());
+  return (globalThis.hashLabKeyPair ??= generateKeyPair());
 }
 
 function generateKeyPair(): KeyPair {

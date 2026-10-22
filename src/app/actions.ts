@@ -1,10 +1,9 @@
 "use server";
 
 import type { DigestResult, PublicKeyInfo, SignResult, VerifyResult } from "@/hash/contract";
-import { BCRYPT_MAX_PASSWORD_BYTES } from "@/hash/params";
-import { digest, hashPassword, publicKey, sign, splitRecord, verify, verifyPassword } from "@/hash/server";
-import type { ActionResult, LoginResult, RegistrationResult, UserView } from "./action-types";
-import { LOCKOUT_POLICY, users } from "./users";
+import { digest, publicKey, sign, verify } from "@/hash/server";
+import type { ActionResult, LoginResult, RegistrationResult } from "./action-types";
+import { authenticate, register, userViews, type AuthOutcome, type UserView } from "./users";
 import {
   parseContent,
   parseDigestAlgo,
@@ -73,77 +72,39 @@ export async function verifySignatureAction(form: FormData): Promise<ActionResul
   return execute(() => verify(algo.data, message.data, signature.data));
 }
 
-function userViews(): UserView[] {
-  return Array.from(users.values(), ({ username, algo, record, createdAt }) => ({
-    username, algo, record, createdAt, parts: splitRecord(record),
-  }));
-}
-
 export async function listUsersAction(): Promise<ActionResult<UserView[]>> {
   return execute(userViews);
 }
 
 export async function registerAction(form: FormData): Promise<ActionResult<RegistrationResult>> {
-  const parsedAlgo = parsePasswordAlgo(form.get("algo"));
-  if (!parsedAlgo.ok) return parsedAlgo;
-  const algo = parsedAlgo.data;
+  const algo = parsePasswordAlgo(form.get("algo"));
+  if (!algo.ok) return algo;
   const username = parseUsername(form.get("username"));
   if (!username.ok) return username;
-  const password = parseNewPassword(form.get("password"), algo);
+  const password = parseNewPassword(form.get("password"), algo.data);
   if (!password.ok) return password;
-  const key = username.data.toLowerCase();
-  const taken: ActionResult<never> = { ok: false, error: "Este usuario ya está registrado", field: "username" };
-  if (users.has(key)) return taken;
   try {
-    const hash = await hashPassword(algo, password.data);
-    if (users.has(key)) return taken;
-    users.set(key, { username: username.data, algo, record: hash.record, createdAt: Date.now(), failedAttempts: 0, lockedUntil: 0 });
-    return { ok: true, data: { hash, username: username.data, users: userViews() } };
+    const registration = await register(username.data, algo.data, password.data);
+    if (registration.kind === "taken") return { ok: false, error: "Este usuario ya está registrado", field: "username" };
+    return { ok: true, data: { hash: registration.hash, username: username.data, users: userViews() } };
   } catch {
     return fail("No se pudo registrar el usuario. Inténtalo de nuevo");
   }
 }
 
-async function dummyRecord(): Promise<string> {
-  // Both known and unknown users await the same cold-start work.
-  const dummy = globalThis.hashLabDummyRecord ??= hashPassword("bcrypt", "HashLab-dummy-credential").then((result) => result.record);
-  try {
-    return await dummy;
-  } catch (error) {
-    globalThis.hashLabDummyRecord = undefined;
-    throw error;
-  }
-}
+const LOGIN_MESSAGES: Record<AuthOutcome["kind"], string> = {
+  granted: "Acceso concedido",
+  denied: "Usuario o contraseña incorrectos",
+  locked: "Demasiados intentos fallidos",
+};
 
 export async function loginAction(form: FormData): Promise<ActionResult<LoginResult>> {
   const username = parseUsername(form.get("username"));
   if (!username.ok) return username;
   const password = parsePassword(form.get("password"));
   if (!password.ok) return password;
-  const user = users.get(username.data.toLowerCase());
-  const locked = (): LoginResult => ({
-    kind: "locked", algo: user?.algo ?? "bcrypt", lockedUntil: user?.lockedUntil ?? 0,
-    message: "Cuenta bloqueada",
-  });
-  if (user && user.lockedUntil > Date.now()) return { ok: true, data: locked() };
-  if (user && user.lockedUntil !== 0) {
-    user.failedAttempts = 0;
-    user.lockedUntil = 0;
-  }
   return execute(async () => {
-    const dummy = await dummyRecord();
-    const tooLong = (user?.algo ?? "bcrypt") === "bcrypt" && Buffer.byteLength(password.data, "utf8") > BCRYPT_MAX_PASSWORD_BYTES;
-    // bcrypt rejects oversized input immediately, so still do a full verification.
-    const result = await verifyPassword(user?.record ?? dummy, tooLong ? "HashLab-rejected-credential" : password.data);
-    if (user && user.lockedUntil > Date.now()) return locked();
-    const valid = Boolean(user && result.ok && !tooLong);
-    if (user) {
-      user.failedAttempts = valid ? 0 : user.failedAttempts + 1;
-      if (user.failedAttempts >= LOCKOUT_POLICY.maxAttempts) user.lockedUntil = Date.now() + LOCKOUT_POLICY.lockMs;
-    }
-    return {
-      ...result, kind: "verified", ok: valid, lockedUntil: user?.lockedUntil ?? 0,
-      message: valid ? "Acceso concedido" : "Usuario o contraseña incorrectos",
-    };
+    const outcome = await authenticate(username.data, password.data);
+    return { ...outcome, message: LOGIN_MESSAGES[outcome.kind] };
   });
 }

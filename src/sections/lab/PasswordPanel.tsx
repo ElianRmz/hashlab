@@ -2,12 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { listUsersAction, loginAction, registerAction } from "@/app/actions";
-import type { ActionResult, LoginResult, RegistrationResult, UserView } from "@/app/action-types";
+import type { ActionResult, LoginResult, RegistrationResult } from "@/app/action-types";
+import type { UserView } from "@/app/users";
 import { PASSWORD_ALGOS, type PasswordAlgoId } from "@/hash/algorithms";
 import { Button, Chips, Field, Panel, TextInput, Verdict, type VerdictState } from "./ui";
 import { fieldError, milliseconds, StoredRecord, TaskError, useServerTask } from "./shared";
 
 const options = Object.values(PASSWORD_ALGOS).map((a) => ({ id: a.id, label: a.label, sub: a.param }));
+
+function loginVerdict(result: LoginResult, remaining: number): VerdictState {
+  switch (result.kind) {
+    case "granted":
+      return { ok: true, title: result.message, detail: `${milliseconds(result.ms)} · ${PASSWORD_ALGOS[result.algo].label}` };
+    case "denied":
+      return { ok: false, title: result.message, detail: "El servidor no revela cuál de los dos falló" };
+    case "locked":
+      return remaining > 0
+        ? { ok: false, title: result.message, detail: `Espera ${remaining} s` }
+        : { ok: false, title: "Bloqueo terminado", detail: "Puedes volver a intentar" };
+  }
+}
 
 export function PasswordPanel({ initialUsers }: { initialUsers: ActionResult<UserView[]> }) {
   const [algo, setAlgo] = useState<PasswordAlgoId>("bcrypt");
@@ -17,14 +31,13 @@ export function PasswordPanel({ initialUsers }: { initialUsers: ActionResult<Use
   const [users, setUsers] = useState(initialUsers.ok ? initialUsers.data : []);
   const [loginUsername, setLoginUsername] = useState("");
   const [attempt, setAttempt] = useState("");
-  const [login, setLogin] = useState<{ username: string; result: LoginResult } | null>(null);
+  const [login, setLogin] = useState<LoginResult | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const registration = useServerTask<RegistrationResult>();
   const authentication = useServerTask<LoginResult>();
   const listing = useServerTask<UserView[]>();
-  const lockedUntil = login?.result.lockedUntil ?? 0;
+  const lockedUntil = login?.kind === "locked" ? login.until : 0;
   const remaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
-  const result = login?.username.toLowerCase() === loginUsername.toLowerCase() ? login.result : null;
   const pending = registration.pending || authentication.pending;
 
   useEffect(() => {
@@ -35,16 +48,6 @@ export function PasswordPanel({ initialUsers }: { initialUsers: ActionResult<Use
     }, 1000);
     return () => clearInterval(timer);
   }, [lockedUntil]);
-
-  const verdict: VerdictState = result ? {
-    ok: result.kind === "verified" && result.ok,
-    title: remaining > 0 ? "Cuenta bloqueada" : result.kind === "locked" ? "Bloqueo terminado" : result.message,
-    detail: [
-      remaining > 0 ? `Intenta en ${remaining} s` : result.kind === "locked" ? "Puedes volver a intentar" : "",
-      result.kind === "verified" ? milliseconds(result.ms) : "",
-      PASSWORD_ALGOS[result.algo].label,
-    ].filter(Boolean).join(" · "),
-  } : null;
 
   function register() {
     const form = new FormData();
@@ -69,7 +72,7 @@ export function PasswordPanel({ initialUsers }: { initialUsers: ActionResult<Use
     setLogin(null);
     authentication.run(() => loginAction(form), (data) => {
       setNow(Date.now());
-      setLogin({ username: loginUsername, result: data });
+      setLogin(data);
     });
   }
 
@@ -111,7 +114,7 @@ export function PasswordPanel({ initialUsers }: { initialUsers: ActionResult<Use
           <Button disabled={pending} onClick={verifyLogin} className="self-start">{authentication.pending ? "Verificando…" : "Verificar acceso"}</Button>
         </fieldset>
         <TaskError error={authentication.error} />
-        <Verdict state={verdict} />
+        <Verdict state={login && loginVerdict(login, remaining)} />
       </Panel>
       <Panel title="Base de datos" className="lg:col-span-2">
         <p className="font-serif text-sm text-paper-dim">Usuarios en memoria del servidor · {users.length} registros</p>

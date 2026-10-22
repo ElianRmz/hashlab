@@ -4,6 +4,7 @@ import { BCRYPT_COST, BCRYPT_MAX_PASSWORD_BYTES } from "../params.ts";
 import { defineScheme } from "./scheme.ts";
 
 const fits = (password: string) => Buffer.byteLength(password, "utf8") <= BCRYPT_MAX_PASSWORD_BYTES;
+const PLACEHOLDER = "HashLab-placeholder";
 
 export const bcryptScheme = defineScheme({
   id: "bcrypt",
@@ -16,5 +17,6 @@ export const bcryptScheme = defineScheme({
     }
     return hash(password, BCRYPT_COST);
   },
-  verify: (record, password) => (fits(password) ? compare(password, record) : Promise.resolve(false)),
+  // Una entrada de más de 72 bytes nunca coincide, pero paga una comparación completa para no delatarse por tiempo.
+  verify: (record, password) => (fits(password) ? compare(password, record) : compare(PLACEHOLDER, record).then(() => false)),
 });
