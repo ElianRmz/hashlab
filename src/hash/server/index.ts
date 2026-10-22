@@ -1,22 +1,19 @@
 import "server-only";
-import type { DigestAlgoId, PasswordAlgoId } from "../algorithms";
+import type { DigestAlgoId, PasswordAlgoId } from "../algorithms.ts";
 import type {
-  DigestResult,
   PasswordHashResult,
   PasswordVerifyResult,
   PublicKeyInfo,
   RecordPart,
   SignResult,
   VerifyResult,
-} from "../contract";
+} from "../contract.ts";
+
+export { digest } from "./digest.ts";
 
 const pending = (name: string): never => {
   throw new Error(`${name} no implementado`);
 };
-
-export function digest(algo: DigestAlgoId, data: Uint8Array): DigestResult {
-  return pending(`digest(${algo}, ${data.byteLength})`);
-}
 
 export function publicKey(): PublicKeyInfo {
   return pending("publicKey");
