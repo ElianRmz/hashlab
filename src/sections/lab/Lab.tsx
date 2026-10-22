@@ -61,7 +61,7 @@ export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; ini
   return (
     <Section id="lab" aria-label="Laboratorio de hash" className="scroll-mt-0 bg-ink/70 py-16 backdrop-blur-[2px] sm:py-24">
       <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_minmax(0,28rem)] lg:items-end">
-        <div className="@container -my-8 flow-root overflow-x-visible overflow-y-clip py-8">
+        <div className="@container -my-8 overflow-y-clip py-8">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={mode}
