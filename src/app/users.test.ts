@@ -51,11 +51,16 @@ describe("authenticate", () => {
     const name = await registered("reloj.verificacion", "pbkdf2");
     await fail(name, 5, T0);
     const start = performance.now();
+    let clockReadMs = 0;
     const outcome = await authenticateUser(name, PASSWORD, {
-      now: () => T0 + (performance.now() - start >= 20 ? 30_000 : 29_999),
+      now: () => {
+        clockReadMs = performance.now() - start;
+        return T0 + 30_000;
+      },
       failureFloorMs: 0,
     });
-    assert.equal(outcome.kind, "granted", "se usó la hora anterior a la verificación");
+    assert.equal(outcome.kind, "granted");
+    assert.ok(outcome.kind === "granted" && clockReadMs >= outcome.ms, "se leyó el reloj antes de verificar");
   });
 
   it("descarta fallos inactivos y reinicia su contador después de lockMs", async () => {
