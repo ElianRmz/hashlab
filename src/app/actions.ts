@@ -1,8 +1,8 @@
 "use server";
 
-import type { DigestResult, PublicKeyInfo, SignResult, VerifyResult } from "@/hash/contract";
+import type { PublicKeyInfo, SignResult, VerifyResult } from "@/hash/contract";
 import { digest, publicKey, sign, verify } from "@/hash/server";
-import type { ActionResult, LoginResult, RegistrationResult } from "./action-types";
+import type { ActionResult, IntegrityResult, LoginResult, RegistrationResult } from "./action-types";
 import { authenticate, register, userViews, type AuthOutcome, type UserView } from "./users";
 import {
   parseContent,
@@ -14,6 +14,7 @@ import {
   parseReference,
   parseSignature,
   parseUsername,
+  type Content,
 } from "./validation";
 
 function fail(error: string): ActionResult<never> {
@@ -28,26 +29,21 @@ async function execute<T>(work: () => T | Promise<T>): Promise<ActionResult<T>> 
   }
 }
 
-export async function digestAction(form: FormData): Promise<ActionResult<DigestResult>> {
+async function bytesOf(content: Content): Promise<Uint8Array> {
+  return content.mode === "text" ? new TextEncoder().encode(content.text) : new Uint8Array(await content.file.arrayBuffer());
+}
+
+export async function digestAction(form: FormData): Promise<ActionResult<IntegrityResult>> {
   const algo = parseDigestAlgo(form.get("algo"));
   if (!algo.ok) return algo;
   const content = parseContent(form.get("mode"), form.get("text"), form.get("file"));
   if (!content.ok) return content;
-  const { data } = content;
-  return execute(async () => digest(algo.data, data.mode === "text" ? new TextEncoder().encode(data.text) : new Uint8Array(await data.file.arrayBuffer())));
-}
-
-export async function referenceAction(form: FormData): Promise<ActionResult<{ reference: string; matches: boolean | null }>> {
-  const algo = parseDigestAlgo(form.get("algo"));
-  if (!algo.ok) return algo;
-  const reference = parseReference(form.get("reference") ?? "", algo.data);
+  const reference = parseReference(form.get("reference"), algo.data);
   if (!reference.ok) return reference;
-  const hex = form.get("hex");
-  const expected = reference.data?.length ?? 0;
-  if (hex !== null && (typeof hex !== "string" || !/^[0-9a-f]+$/.test(hex) || hex.length !== expected)) {
-    return { ok: false, error: "Vuelve a calcular el hash antes de comparar", field: "reference" };
-  }
-  return { ok: true, data: { reference: reference.data ?? "", matches: hex === null ? null : reference.data === hex } };
+  return execute(async () => {
+    const hash = digest(algo.data, await bytesOf(content.data));
+    return { hash, matches: reference.data === null ? null : reference.data === hash.hex };
+  });
 }
 
 export async function publicKeyAction(): Promise<ActionResult<PublicKeyInfo>> {
