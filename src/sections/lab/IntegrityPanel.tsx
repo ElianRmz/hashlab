@@ -72,10 +72,12 @@ export function IntegrityPanel() {
                 }} />
             </Field>
             {input.mode === "text" ? <Field index="03" label="Texto a proteger" htmlFor="integrity-text" error={fieldError(task.error, "text")}>
-              <TextArea id="integrity-text" aria-describedby="integrity-text-error" value={input.text} onChange={(event) => setInput({ mode: "text", text: event.target.value })} />
+              {(describedBy) => <TextArea id="integrity-text" aria-describedby={describedBy} value={input.text} onChange={(event) => setInput({ mode: "text", text: event.target.value })} />}
             </Field> : <Field index="03" label="Archivo a proteger" htmlFor="integrity-file" error={fieldError(task.error, "file")}>
-              <TextInput id="integrity-file" type="file" aria-describedby="integrity-file-error" onChange={(event) => setInput({ mode: "file", file: event.target.files?.[0] ?? null })} />
-              <p className="break-all font-serif text-sm text-paper-dim">{input.file ? `${input.file.name} · ${input.file.size.toLocaleString("es-MX")} bytes` : "Elige o arrastra un archivo aquí · 1 byte a 5 MB"}</p>
+              {(describedBy) => <>
+                <TextInput id="integrity-file" type="file" aria-describedby={describedBy} onChange={(event) => setInput({ mode: "file", file: event.target.files?.[0] ?? null })} />
+                <p className="break-all font-serif text-sm text-paper-dim">{input.file ? `${input.file.name} · ${input.file.size.toLocaleString("es-MX")} bytes` : "Elige o arrastra un archivo aquí · 1 byte a 5 MB"}</p>
+              </>}
             </Field>}
             <div className="flex flex-wrap gap-3">
               <Button tone="solid" disabled={task.pending} onClick={() => submit(false)}>{task.pending && !comparing ? "Calculando…" : "Calcular hash /"}</Button>
@@ -87,16 +89,16 @@ export function IntegrityPanel() {
       <Panel title="Salida">
         <Digest value={outcome?.result.hash.hex ?? null} placeholder="— calcula un hash para verlo aquí" />
         {outcome && !current && <p role="status" className="font-serif text-sm uppercase text-red">La entrada o el algoritmo cambió · vuelve a calcular</p>}
-        {outcome && <Meta items={[
+        {outcome && <Meta columns={5} items={[
           ["Algoritmo", DIGEST_ALGOS[outcome.result.hash.algo].label], ["Longitud", `${outcome.result.hash.hex.length} hex`],
           ["Bits", String(DIGEST_ALGOS[outcome.result.hash.algo].bits)], ["Entrada", `${outcome.result.hash.inputBytes.toLocaleString("es-MX")} bytes`],
           ["Tiempo", milliseconds(outcome.result.hash.ms)],
         ]} />}
         <Field index="04" label="Hash de referencia" htmlFor="reference" error={fieldError(task.error, "reference")}>
-          <TextInput id="reference" aria-describedby="reference-error" value={reference} disabled={task.pending} onChange={(event) => {
+          {(describedBy) => <TextInput id="reference" aria-describedby={describedBy} value={reference} disabled={task.pending} onChange={(event) => {
             setReference(event.target.value);
             task.setError(null);
-          }} placeholder="pega el hash registrado" />
+          }} placeholder="pega el hash registrado" />}
         </Field>
         <Button className="self-start" disabled={task.pending} onClick={() => submit(true)}>{task.pending && comparing ? "Verificando…" : "Comparar referencia"}</Button>
         <TaskError error={task.error} />

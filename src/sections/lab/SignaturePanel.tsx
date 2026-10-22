@@ -55,7 +55,7 @@ export function SignaturePanel({ publicKey }: { publicKey: PublicKeyInfo }) {
             <Chips label="Algoritmo para firmar" options={options} value={algo} onChange={setAlgo} />
           </Field>
           <Field index="02" label="Mensaje" htmlFor="sign-message" error={fieldError(signing.error, "message")}>
-            <TextArea id="sign-message" aria-describedby="sign-message-error" value={message} onChange={(event) => setMessage(event.target.value)} />
+            {(describedBy) => <TextArea id="sign-message" aria-describedby={describedBy} value={message} onChange={(event) => setMessage(event.target.value)} />}
           </Field>
           <Button tone="solid" disabled={pending} onClick={sign} className="self-start">{signing.pending ? "Firmando…" : "Firmar /"}</Button>
         </fieldset>
@@ -63,7 +63,7 @@ export function SignaturePanel({ publicKey }: { publicKey: PublicKeyInfo }) {
         <div className="flex flex-col gap-2 border-t border-paper/10 pt-5">
           <p className="font-serif text-sm uppercase text-paper-dim">Hash del mensaje firmado</p>
           <Digest value={signed?.digestHex ?? null} placeholder="— firma un mensaje" className="min-h-[2.5em]" />
-          {signed && <Meta items={[["Algoritmo", DIGEST_ALGOS[signed.algo].label], ["Tiempo", milliseconds(signed.ms)]]} />}
+          {signed && <Meta columns={2} items={[["Algoritmo", DIGEST_ALGOS[signed.algo].label], ["Tiempo", milliseconds(signed.ms)]]} />}
         </div>
         <div className="flex min-w-0 flex-col gap-3 border-t border-paper/10 pt-5">
           <p className="font-serif text-sm uppercase text-paper-dim">Llave pública del servidor · {key.scheme} · {key.modulusBits} bits</p>
@@ -77,16 +77,16 @@ export function SignaturePanel({ publicKey }: { publicKey: PublicKeyInfo }) {
       </Panel>
       <Panel title="Receptor · llave pública">
         <Field index="03" label="Mensaje recibido" htmlFor="received-message" error={fieldError(verifying.error, "message")}>
-          <TextArea id="received-message" aria-describedby="received-message-error" value={received} disabled={pending} onChange={(event) => {
+          {(describedBy) => <TextArea id="received-message" aria-describedby={describedBy} value={received} disabled={pending} onChange={(event) => {
             setReceived(event.target.value);
             setVerdict(null);
-          }} placeholder="edítalo para simular un ataque" />
+          }} placeholder="edítalo para simular un ataque" />}
         </Field>
         <Field index="04" label="Firma recibida (base64)" htmlFor="received-signature" error={fieldError(verifying.error, "signature")}>
-          <TextArea id="received-signature" aria-describedby="received-signature-error" rows={6} value={signature} disabled={pending} onChange={(event) => {
+          {(describedBy) => <TextArea id="received-signature" aria-describedby={describedBy} rows={6} value={signature} disabled={pending} onChange={(event) => {
             setSignature(event.target.value);
             setVerdict(null);
-          }} placeholder="pega o edita la firma" className="break-all text-sm" />
+          }} placeholder="pega o edita la firma" className="break-all text-sm" />}
         </Field>
         <p className="font-serif text-sm uppercase text-paper-dim">Verificar con {DIGEST_ALGOS[signed?.algo ?? algo].label}</p>
         <Button disabled={pending} onClick={verify} className="self-start">{verifying.pending ? "Verificando…" : "Verificar firma"}</Button>

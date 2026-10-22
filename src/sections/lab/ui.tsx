@@ -21,15 +21,17 @@ export function Button({ tone = "outline", className, ...rest }: ComponentPropsW
 }
 
 export function Field({ index, label, htmlFor, error, children }: {
-  index: string; label: string; htmlFor?: string; error?: string; children: ReactNode;
+  index: string; label: string; htmlFor?: string; error?: string;
+  children: ReactNode | ((describedBy: string | undefined) => ReactNode);
 }) {
+  const errorId = htmlFor && error ? `${htmlFor}-error` : undefined;
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <label htmlFor={htmlFor} className="font-serif text-base uppercase text-paper-dim">
         <span className="text-red">{index} /</span> {label}
       </label>
-      {children}
-      {error && <p id={htmlFor ? `${htmlFor}-error` : undefined} role="alert" className="font-serif text-sm text-red">{error}</p>}
+      {typeof children === "function" ? children(errorId) : children}
+      {error && <p id={errorId} role="alert" className="font-serif text-sm text-red">{error}</p>}
     </div>
   );
 }

@@ -35,9 +35,11 @@ export function fieldError(error: ActionError | null, field: string) {
   return error?.field === field ? error.error : undefined;
 }
 
-export function Meta({ items }: { items: [string, string][] }) {
+const META_COLUMNS = { 2: "sm:grid-cols-2", 5: "sm:grid-cols-5" } as const;
+
+export function Meta({ items, columns }: { items: [string, string][]; columns: keyof typeof META_COLUMNS }) {
   return (
-    <dl className={cn("grid grid-cols-2 gap-px bg-paper/10", items.length === 5 ? "sm:grid-cols-5" : "sm:grid-cols-2")}>
+    <dl className={cn("grid grid-cols-2 gap-px bg-paper/10", META_COLUMNS[columns])}>
       {items.map(([key, value]) => (
         <div key={key} className="min-w-0 bg-ink px-3 py-2.5">
           <dt className="font-serif text-xs uppercase text-paper-dim">{key}</dt>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { cn } from "@/lib/cn";
 
-const SCRAMBLE_MS = 280;
+const SCRAMBLE_MS = 650;
 const NOISE = "0123456789abcdef";
 
 const noise = (length: number) => Array.from({ length }, () => NOISE[(Math.random() * 16) | 0]).join("");

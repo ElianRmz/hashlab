@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { brand, Tagline } from "@/brand";
 import { Section } from "@/components/layout/Section";
@@ -51,6 +51,11 @@ function Tabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
 export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; initialUsers: UserView[] }) {
   const [mode, setMode] = useState<Mode>("integridad");
   const m = MODES[mode];
+  const panels: Record<Mode, ReactNode> = {
+    integridad: <IntegrityPanel />,
+    firmas: <SignaturePanel publicKey={publicKey} />,
+    contrasenas: <PasswordPanel initialUsers={initialUsers} />,
+  };
 
   return (
     <Section id="lab" aria-label="Laboratorio de hash" className="scroll-mt-0 bg-ink/70 py-16 backdrop-blur-[2px] sm:py-24">
@@ -86,7 +91,7 @@ export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; ini
             initial={id === mode ? "shown" : "hidden"}
             animate={id === mode ? "shown" : "hidden"}
           >
-            {id === "integridad" ? <IntegrityPanel /> : id === "firmas" ? <SignaturePanel publicKey={publicKey} /> : <PasswordPanel initialUsers={initialUsers} />}
+            {panels[id]}
           </motion.div>
         ))}
       </div>

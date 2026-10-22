@@ -84,10 +84,10 @@ export function PasswordPanel({ initialUsers }: { initialUsers: UserView[] }) {
             <Chips label="Algoritmo de contraseña" className="grid-cols-1 min-[480px]:grid-cols-3" options={options} value={algo} onChange={setAlgo} />
           </Field>
           <Field index="02" label="Usuario" htmlFor="register-username" error={fieldError(registration.error, "username")}>
-            <TextInput id="register-username" autoComplete="off" aria-describedby="register-username-error" value={username} onChange={(event) => setUsername(event.target.value)} />
+            {(describedBy) => <TextInput id="register-username" autoComplete="off" aria-describedby={describedBy} value={username} onChange={(event) => setUsername(event.target.value)} />}
           </Field>
           <Field index="03" label="Contraseña" htmlFor="register-password" error={fieldError(registration.error, "password")}>
-            <TextInput id="register-password" type="password" autoComplete="new-password" aria-describedby="register-password-error" value={password} onChange={(event) => setPassword(event.target.value)} />
+            {(describedBy) => <TextInput id="register-password" type="password" autoComplete="new-password" aria-describedby={describedBy} value={password} onChange={(event) => setPassword(event.target.value)} />}
           </Field>
           <Button tone="solid" disabled={pending} onClick={register} className="self-start">{registration.pending ? "Calculando…" : "Registrar /"}</Button>
         </fieldset>
@@ -100,16 +100,16 @@ export function PasswordPanel({ initialUsers }: { initialUsers: UserView[] }) {
       <Panel title="Iniciar sesión">
         <fieldset disabled={pending} className="flex min-w-0 flex-col gap-5">
           <Field index="04" label="Usuario" htmlFor="login-username" error={fieldError(authentication.error, "username")}>
-            <TextInput id="login-username" autoComplete="off" aria-describedby="login-username-error" value={loginUsername} onChange={(event) => {
+            {(describedBy) => <TextInput id="login-username" autoComplete="off" aria-describedby={describedBy} value={loginUsername} onChange={(event) => {
               setLoginUsername(event.target.value);
               setLogin(null);
-            }} />
+            }} />}
           </Field>
           <Field index="05" label="Contraseña" htmlFor="login-password" error={fieldError(authentication.error, "password")}>
-            <TextInput id="login-password" type="password" autoComplete="off" aria-describedby="login-password-error" value={attempt} onChange={(event) => {
+            {(describedBy) => <TextInput id="login-password" type="password" autoComplete="off" aria-describedby={describedBy} value={attempt} onChange={(event) => {
               setAttempt(event.target.value);
               setLogin(null);
-            }} placeholder="escribe la contraseña" />
+            }} placeholder="escribe la contraseña" />}
           </Field>
           <Button disabled={pending} onClick={verifyLogin} className="self-start">{authentication.pending ? "Verificando…" : "Verificar acceso"}</Button>
         </fieldset>
