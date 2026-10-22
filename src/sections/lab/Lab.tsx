@@ -13,8 +13,8 @@ import { SignaturePanel } from "./SignaturePanel";
 import { PasswordPanel } from "./PasswordPanel";
 
 const pane: Variants = {
-  hidden: { opacity: 0, transform: "translateY(10px)", transition: { duration: 0 }, transitionEnd: { display: "none" } },
-  shown: { display: "block", opacity: 1, transform: "translateY(0px)", transition: { duration: 0.22, ease: brand.motion.ease } },
+  hidden: { opacity: 0, transform: "translateY(10px)", transition: { duration: 0 } },
+  shown: { opacity: 1, transform: "translateY(0px)", transition: { duration: 0.22, ease: brand.motion.ease } },
 };
 
 function Tabs({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
@@ -60,7 +60,7 @@ export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; ini
   return (
     <Section id="lab" aria-label="Laboratorio de hash" className="scroll-mt-0 bg-ink/70 py-16 backdrop-blur-[2px] sm:py-24">
       <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_minmax(0,28rem)] lg:items-end">
-        <div className="overflow-hidden">
+        <div className="@container overflow-hidden">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={mode}
@@ -69,24 +69,37 @@ export function Lab({ publicKey, initialUsers }: { publicKey: PublicKeyInfo; ini
               exit={{ opacity: 0, transform: "translateY(-30%)", transition: { duration: 0.15, ease: brand.motion.ease } }}
             >
               <Tagline lead={m.lead} accent={m.accent} tone="redMuted" className="text-[clamp(1.25rem,2vw,2rem)] sm:text-[clamp(1.25rem,2vw,2rem)]" />
-              <h2 className="font-display text-[clamp(2.5rem,6vw,6rem)] font-extrabold uppercase leading-[0.9] tracking-[-0.04em] text-red">
+              <h2 className="whitespace-nowrap font-display text-[min(clamp(2.5rem,6vw,6rem),12cqi)] font-extrabold uppercase leading-[0.9] tracking-[-0.04em] text-red">
                 {m.label}
               </h2>
             </motion.div>
           </AnimatePresence>
         </div>
-        <p className="font-serif text-xl uppercase leading-snug text-paper">{m.blurb}</p>
+        <div className="grid">
+          {MODE_ORDER.map((id) => (
+            <p
+              key={id}
+              aria-hidden={id !== mode}
+              className={cn("col-start-1 row-start-1 font-serif text-xl uppercase leading-snug text-paper", id !== mode && "invisible")}
+            >
+              {MODES[id].blurb}
+            </p>
+          ))}
+        </div>
       </div>
 
       <Tabs mode={mode} onChange={setMode} />
 
-      <div className="pt-6">
+      <div className="grid pt-6">
         {MODE_ORDER.map((id) => (
           <motion.div
             key={id}
             id={`pane-${id}`}
             role="tabpanel"
             aria-labelledby={`tab-${id}`}
+            aria-hidden={id !== mode}
+            inert={id !== mode}
+            className={cn("col-start-1 row-start-1", id !== mode && "invisible")}
             variants={pane}
             initial={id === mode ? "shown" : "hidden"}
             animate={id === mode ? "shown" : "hidden"}
