@@ -14,7 +14,6 @@ export type PasswordAlgo = {
   id: PasswordAlgoId;
   label: string;
   param: string;
-  demoMs: number;
 };
 
 export const DIGEST_ALGOS: Record<DigestAlgoId, DigestAlgo> = {
@@ -24,9 +23,9 @@ export const DIGEST_ALGOS: Record<DigestAlgoId, DigestAlgo> = {
 };
 
 export const PASSWORD_ALGOS: Record<PasswordAlgoId, PasswordAlgo> = {
-  bcrypt: { kind: "password", id: "bcrypt", label: "BCRYPT", param: "COSTO 12", demoMs: 248 },
-  sha256crypt: { kind: "password", id: "sha256crypt", label: "SHA256CRYPT", param: "5 000 RONDAS", demoMs: 9 },
-  pbkdf2: { kind: "password", id: "pbkdf2", label: "PBKDF2", param: "600 000 IT.", demoMs: 412 },
+  bcrypt: { kind: "password", id: "bcrypt", label: "BCRYPT", param: `COSTO ${BCRYPT_COST}` },
+  sha256crypt: { kind: "password", id: "sha256crypt", label: "SHA256CRYPT", param: `${SHA256CRYPT_ROUNDS.toLocaleString("es-MX")} RONDAS` },
+  pbkdf2: { kind: "password", id: "pbkdf2", label: "PBKDF2", param: `${PBKDF2.iterations.toLocaleString("es-MX")} IT.` },
 };
 
 export type Mode = "integridad" | "firmas" | "contrasenas";
@@ -56,3 +55,5 @@ export const MODES: Record<Mode, { index: string; label: string; lead: string; a
 };
 
 export const MODE_ORDER: Mode[] = ["integridad", "firmas", "contrasenas"];
+import { BCRYPT_COST, PBKDF2, SHA256CRYPT_ROUNDS } from "./params";
+
