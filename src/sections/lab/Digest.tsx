@@ -1,15 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
-import { brand } from "@/brand";
+import { useEffect, useState } from "react";
+import { useReducedMotion } from "motion/react";
 import { cn } from "@/lib/cn";
 
-export type RevealStyle = "descifrado" | "cascada";
-
-export const RevealContext = createContext<RevealStyle>("descifrado");
-
-const SCRAMBLE_MS = 650;
+const SCRAMBLE_MS = 280;
 const NOISE = "0123456789abcdef";
 
 const noise = (length: number) => Array.from({ length }, () => NOISE[(Math.random() * 16) | 0]).join("");
@@ -51,34 +46,13 @@ function Scramble({ value }: { value: string }) {
   );
 }
 
-function Cascade({ value }: { value: string }) {
-  return (
-    <span key={value}>
-      {[...value].map((c, i) => (
-        <motion.span
-          key={i}
-          className="inline-block"
-          initial={{ opacity: 0, transform: "translateY(-40%)" }}
-          animate={{ opacity: 1, transform: "translateY(0%)" }}
-          transition={{ duration: brand.motion.dur.base, ease: brand.motion.ease, delay: (i / value.length) * 0.45 }}
-        >
-          {c}
-        </motion.span>
-      ))}
-    </span>
-  );
-}
-
 export function Digest({ value, placeholder, className }: { value: string | null; placeholder: string; className?: string }) {
-  const style = useContext(RevealContext);
   return (
     <p className={cn("min-h-[3.5em] break-all font-mono text-[15px] leading-relaxed text-paper", className)}>
       {value === null ? (
         <span className="text-paper-dim/60">{placeholder}</span>
-      ) : style === "descifrado" ? (
-        <Scramble key={value} value={value} />
       ) : (
-        <Cascade value={value} />
+        <Scramble key={value} value={value} />
       )}
     </p>
   );

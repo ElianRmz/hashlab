@@ -10,7 +10,7 @@ export function Button({ tone = "outline", className, ...rest }: ComponentPropsW
     <button
       className={cn(
         "cursor-pointer border border-red px-5 py-3 font-display text-sm font-extrabold uppercase tracking-tight",
-        "transition-[transform,background-color,color] duration-150 ease-brand active:scale-[0.97] motion-reduce:active:scale-100",
+        "transition-transform duration-150 ease-brand active:scale-[0.97] motion-reduce:active:scale-100",
         "disabled:cursor-not-allowed disabled:opacity-40",
         tone === "solid" ? "bg-red text-ink hover:bg-paper hover:border-paper" : "text-red hover:bg-red hover:text-ink",
         className,
@@ -20,19 +20,22 @@ export function Button({ tone = "outline", className, ...rest }: ComponentPropsW
   );
 }
 
-export function Field({ index, label, children }: { index: string; label: string; children: ReactNode }) {
+export function Field({ index, label, htmlFor, error, children }: {
+  index: string; label: string; htmlFor?: string; error?: string; children: ReactNode;
+}) {
   return (
-    <label className="flex flex-col gap-2">
-      <span className="font-serif text-base uppercase text-paper-dim">
+    <div className="flex min-w-0 flex-col gap-2">
+      <label htmlFor={htmlFor} className="font-serif text-base uppercase text-paper-dim">
         <span className="text-red">{index} /</span> {label}
-      </span>
+      </label>
       {children}
-    </label>
+      {error && <p id={htmlFor ? `${htmlFor}-error` : undefined} role="alert" className="font-serif text-sm text-red">{error}</p>}
+    </div>
   );
 }
 
 const inputClass =
-  "w-full border border-paper/15 bg-ink-soft/85 px-4 py-3 font-mono text-[15px] text-paper outline-none transition-colors duration-150 ease-brand placeholder:text-paper-dim/60 focus:border-red";
+  "w-full border border-paper/15 bg-ink-soft/85 px-4 py-3 font-mono text-[15px] text-paper outline-none placeholder:text-paper-dim/60 focus:border-red";
 
 export const TextInput = (props: ComponentPropsWithoutRef<"input">) => <input {...props} className={cn(inputClass, props.className)} />;
 
@@ -45,14 +48,16 @@ export function Chips<T extends string>({
   value,
   onChange,
   label,
+  className,
 }: {
   options: { id: T; label: string; sub?: string }[];
   value: T;
   onChange: (id: T) => void;
   label: string;
+  className?: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid grid-cols-3 gap-2">
+    <div role="radiogroup" aria-label={label} className={cn("grid grid-cols-3 gap-2", className)}>
       {options.map((o) => {
         const on = o.id === value;
         return (
@@ -63,7 +68,7 @@ export function Chips<T extends string>({
             aria-checked={on}
             onClick={() => onChange(o.id)}
             className={cn(
-              "cursor-pointer border px-3 py-2.5 text-left transition-[transform,background-color,color,border-color] duration-150 ease-brand active:scale-[0.97] motion-reduce:active:scale-100",
+              "cursor-pointer border px-3 py-2.5 text-left transition-transform duration-150 ease-brand active:scale-[0.97] motion-reduce:active:scale-100",
               on ? "border-red bg-red text-ink" : "border-paper/15 bg-ink-soft/70 text-paper hover:border-red/70",
             )}
           >
@@ -78,7 +83,7 @@ export function Chips<T extends string>({
 
 export function Panel({ title, className, children }: { title: string; className?: string; children: ReactNode }) {
   return (
-    <div className={cn("flex flex-col gap-5 border border-paper/10 bg-ink/80 p-5 backdrop-blur-sm sm:p-7", className)}>
+    <div className={cn("flex min-w-0 flex-col gap-5 border border-paper/10 bg-ink/80 p-5 backdrop-blur-sm sm:p-7", className)}>
       <p className="font-serif text-sm uppercase tracking-[0.02em] text-paper-dim">{title}</p>
       {children}
     </div>
