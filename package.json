@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/hash/server/*.test.ts\" \"src/app/*.test.ts\"",
+    "test": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/hash/server/*.test.ts\" \"src/app/*.test.ts\" \"src/sections/lab/*.test.ts\"",
     "bench": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/hash/server/bench.ts"
   },
   "dependencies": {

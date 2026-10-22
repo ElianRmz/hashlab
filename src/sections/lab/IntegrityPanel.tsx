@@ -5,28 +5,21 @@ import { digestAction } from "@/app/actions";
 import type { IntegrityResult } from "@/app/action-types";
 import { parseFile } from "@/app/validation";
 import { DIGEST_ALGOS, type DigestAlgoId } from "@/hash/algorithms";
+import { integrityState, type IntegrityInput, type IntegrityOutcome } from "./integrity-state";
 import { Digest } from "./Digest";
 import { Button, Chips, Field, Panel, TextArea, TextInput, Verdict, type VerdictState } from "./ui";
 import { fieldError, Meta, milliseconds, TaskError, useServerTask } from "./shared";
 
 const options = Object.values(DIGEST_ALGOS).map((a) => ({ id: a.id, label: a.label, sub: `${a.bits} BITS` }));
-type Input = { mode: "text"; text: string } | { mode: "file"; file: File | null };
-type Outcome = { input: Input; reference: string | null; result: IntegrityResult };
-
-function sameInput(a: Input, b: Input): boolean {
-  if (a.mode === "text") return b.mode === "text" && a.text === b.text;
-  return b.mode === "file" && a.file?.name === b.file?.name && a.file?.size === b.file?.size && a.file?.lastModified === b.file?.lastModified;
-}
 
 export function IntegrityPanel() {
   const [algo, setAlgo] = useState<DigestAlgoId>("sha256");
-  const [input, setInput] = useState<Input>({ mode: "text", text: "Reporte final de la práctica 3. Versión aprobada por el docente." });
+  const [input, setInput] = useState<IntegrityInput>({ mode: "text", text: "Reporte final de la práctica 3. Versión aprobada por el docente." });
   const [reference, setReference] = useState("");
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [outcome, setOutcome] = useState<IntegrityOutcome | null>(null);
   const [comparing, setComparing] = useState(false);
   const task = useServerTask<IntegrityResult>();
-  const current = outcome !== null && outcome.result.hash.algo === algo && sameInput(outcome.input, input);
-  const matches = current && outcome.reference === reference ? outcome.result.matches : null;
+  const { current, matches } = integrityState(outcome, input, algo, reference);
   const verdict: VerdictState = matches === null ? null : {
     ok: matches,
     title: matches ? "Íntegro" : "Alterado",
@@ -56,6 +49,7 @@ export function IntegrityPanel() {
         event.preventDefault();
         if (!task.pending) {
           setInput({ mode: "file", file: event.dataTransfer.files[0] ?? null });
+          setOutcome(null);
           task.setError(null);
         }
       }}>
@@ -75,7 +69,11 @@ export function IntegrityPanel() {
               {(describedBy) => <TextArea id="integrity-text" aria-describedby={describedBy} value={input.text} onChange={(event) => setInput({ mode: "text", text: event.target.value })} />}
             </Field> : <Field index="03" label="Archivo a proteger" htmlFor="integrity-file" error={fieldError(task.error, "file")}>
               {(describedBy) => <>
-                <TextInput id="integrity-file" type="file" aria-describedby={describedBy} onChange={(event) => setInput({ mode: "file", file: event.target.files?.[0] ?? null })} />
+                <TextInput id="integrity-file" type="file" aria-describedby={describedBy} onChange={(event) => {
+                  setInput({ mode: "file", file: event.target.files?.[0] ?? null });
+                  setOutcome(null);
+                  task.setError(null);
+                }} />
                 <p className="break-all font-serif text-sm text-paper-dim">{input.file ? `${input.file.name} · ${input.file.size.toLocaleString("es-MX")} bytes` : "Elige o arrastra un archivo aquí · 1 byte a 5 MB"}</p>
               </>}
             </Field>}
