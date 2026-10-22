@@ -1,3 +1,4 @@
+import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import type { PasswordAlgoId } from "../algorithms.ts";
 import type { RecordPart } from "../contract.ts";

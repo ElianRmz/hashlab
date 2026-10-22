@@ -1,3 +1,4 @@
+import "server-only";
 import { compare, hash } from "bcryptjs";
 import { BCRYPT_COST, BCRYPT_MAX_PASSWORD_BYTES } from "../params.ts";
 import { defineScheme } from "./scheme.ts";

@@ -1,3 +1,4 @@
+import "server-only";
 import { pbkdf2, randomBytes } from "node:crypto";
 import { promisify } from "node:util";
 import { PBKDF2 } from "../params.ts";

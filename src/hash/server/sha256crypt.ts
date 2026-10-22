@@ -1,3 +1,4 @@
+import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { SHA256CRYPT_ROUNDS } from "../params.ts";
 import { defineScheme, safeEqual } from "./scheme.ts";

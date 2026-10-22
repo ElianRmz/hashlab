@@ -1,3 +1,4 @@
+import "server-only";
 import type { PasswordAlgoId } from "../algorithms.ts";
 import type { PasswordHashResult, PasswordVerifyResult, RecordPart } from "../contract.ts";
 import { bcryptScheme } from "./bcrypt.ts";

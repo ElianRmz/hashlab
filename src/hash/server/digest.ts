@@ -1,3 +1,4 @@
+import "server-only";
 import { createHash } from "node:crypto";
 import type { DigestAlgoId } from "../algorithms.ts";
 import type { DigestResult } from "../contract.ts";
