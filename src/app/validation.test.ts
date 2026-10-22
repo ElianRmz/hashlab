@@ -43,6 +43,22 @@ describe("algoritmos", () => {
 });
 
 describe("texto y mensaje", () => {
+  it("normaliza CRLF a LF tanto para integridad como para firmas", () => {
+    for (const parse of [parseText, parseMessage]) {
+      assert.equal(accepted(parse("a\r\nb")), "a\nb");
+      assert.equal(accepted(parse("a\nb")), "a\nb");
+      assert.equal(accepted(parse("a\rb")), "a\rb");
+    }
+  });
+
+  it("mide los límites después de normalizar los saltos de línea", () => {
+    const text = "a\r\n".repeat(50_000);
+    assert.equal(accepted(parseText(text)), "a\n".repeat(50_000));
+    rejected(parseText(text + "a"), "text");
+    const message = "a\r\n".repeat(5_000);
+    assert.equal(accepted(parseMessage(message)), "a\n".repeat(5_000));
+    rejected(parseMessage(message + "a"), "message");
+  });
   it("texto: de 1 a 100 000 puntos de código", () => {
     accepted(parseText("a"));
     accepted(parseText("a".repeat(100_000)));
