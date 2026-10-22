@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { hashPassword } from "./passwords.ts";
-import { sha256crypt, sha256cryptAsync } from "./sha256crypt.ts";
+import { sha256crypt } from "./sha256crypt.ts";
 
 // Tabla tests2[] de la especificación, copiada textualmente.
 const SPEC_VECTORS: [setting: string, input: string, expected: string][] = [
@@ -40,36 +40,39 @@ const SPEC_VECTORS: [setting: string, input: string, expected: string][] = [
 
 describe("sha256crypt: vectores de la especificación", () => {
   for (const [setting, input, expected] of SPEC_VECTORS) {
-    it(setting, () => {
-      assert.equal(sha256crypt(input, setting), expected);
+    it(setting, async () => {
+      assert.equal(await sha256crypt(input, setting), expected);
     });
   }
 
-  it("el registro completo sirve como setting al verificar", () => {
-    for (const [, input, expected] of SPEC_VECTORS) assert.equal(sha256crypt(input, expected), expected);
+  it("el registro completo sirve como setting al verificar", async () => {
+    for (const [, input, expected] of SPEC_VECTORS) assert.equal(await sha256crypt(input, expected), expected);
   });
 
-  it("la contraseña se mide en bytes UTF-8", () => {
-    assert.notEqual(sha256crypt("ñ", "$5$rounds=1000$sal"), sha256crypt("n", "$5$rounds=1000$sal"));
-    assert.equal(sha256crypt("ñ", "$5$rounds=1000$sal"), sha256crypt("ñ", "$5$rounds=1000$sal"));
+  it("la contraseña se mide en bytes UTF-8", async () => {
+    assert.notEqual(await sha256crypt("ñ", "$5$rounds=1000$sal"), await sha256crypt("n", "$5$rounds=1000$sal"));
+    assert.equal(await sha256crypt("ñ", "$5$rounds=1000$sal"), await sha256crypt("ñ", "$5$rounds=1000$sal"));
   });
 });
 
 describe("sha256crypt por lotes", () => {
-  it("la variante asíncrona da el mismo registro en cada vector", async () => {
-    for (const [setting, input, expected] of SPEC_VECTORS) {
-      assert.equal(await sha256cryptAsync(input, setting), expected);
-    }
-  });
-
-  it("un temporizador sigue corriendo mientras hashPassword('sha256crypt') trabaja", async () => {
-    let ticks = 0;
-    const timer = setInterval(() => ticks++, 1);
+  it("hashPassword('sha256crypt') mantiene las pausas del temporizador por debajo de 20 ms", async (t) => {
+    let previous = performance.now();
+    let maxGap = 0;
+    const observe = () => {
+      const now = performance.now();
+      maxGap = Math.max(maxGap, now - previous);
+      previous = now;
+    };
+    const timer = setInterval(observe, 1);
     try {
       await hashPassword("sha256crypt", "contraseña de prueba");
+      observe();
     } finally {
       clearInterval(timer);
     }
-    assert.ok(ticks >= 10, `el temporizador solo corrió ${ticks} veces`);
+    t.diagnostic(`mayor intervalo entre ticks: ${maxGap.toFixed(2)} ms`);
+    // El presupuesto de 20 ms deja margen al planificador y limita la espera de otras peticiones.
+    assert.ok(maxGap < 20, `el temporizador estuvo detenido ${maxGap.toFixed(2)} ms`);
   });
 });

@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
+import { setImmediate } from "node:timers/promises";
 import { SHA256CRYPT_ROUNDS } from "../params.ts";
 import { defineScheme, safeEqual } from "./scheme.ts";
 
@@ -12,8 +13,8 @@ const ROUNDS_DEFAULT = 5000;
 const ROUNDS_MIN = 1000;
 const ROUNDS_MAX = 999_999_999;
 const SALT_MAX_CHARS = 16;
-// Cada lote tarda unos 5 ms; ceder entre lotes deja al servidor atender otras peticiones.
-const ROUNDS_PER_YIELD = 10_000;
+// Ceder cada 1000 rondas limita el trabajo continuo en el hilo principal.
+const ROUNDS_PER_YIELD = 1_000;
 
 type Setting = { rounds: number; roundsCustom: boolean; salt: string };
 
@@ -100,19 +101,13 @@ function format({ rounds, roundsCustom, salt }: Setting, C: Buffer): string {
   return `$5$${roundsCustom ? `rounds=${rounds}$` : ""}${salt}$${encodeDigest(C)}`;
 }
 
-export function sha256crypt(password: string, setting: string): string {
-  const prepared = prepare(password, setting);
-  const { A, P, S, rounds } = prepared;
-  return format(prepared, stretch(A, P, S, 0, rounds));
-}
-
-export async function sha256cryptAsync(password: string, setting: string): Promise<string> {
+export async function sha256crypt(password: string, setting: string): Promise<string> {
   const prepared = prepare(password, setting);
   const { P, S, rounds } = prepared;
   let C = prepared.A;
   for (let from = 0; from < rounds; from += ROUNDS_PER_YIELD) {
     C = stretch(C, P, S, from, Math.min(from + ROUNDS_PER_YIELD, rounds));
-    await new Promise(setImmediate);
+    await setImmediate();
   }
   return format(prepared, C);
 }
@@ -123,6 +118,6 @@ const randomSalt = () => Array.from(randomBytes(SALT_MAX_CHARS), (byte) => CRYPT
 export const sha256cryptScheme = defineScheme({
   id: "sha256crypt",
   pattern: /^(\$5\$)(rounds=\d+\$)?([^$]{1,16}\$)([./0-9A-Za-z]{43})$/,
-  hash: (password) => sha256cryptAsync(password, `$5$rounds=${SHA256CRYPT_ROUNDS}$${randomSalt()}`),
-  verify: async (record, password) => safeEqual(Buffer.from(await sha256cryptAsync(password, record)), Buffer.from(record)),
+  hash: (password) => sha256crypt(password, `$5$rounds=${SHA256CRYPT_ROUNDS}$${randomSalt()}`),
+  verify: async (record, password) => safeEqual(Buffer.from(await sha256crypt(password, record)), Buffer.from(record)),
 });
