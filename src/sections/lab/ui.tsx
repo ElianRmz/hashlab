@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { brand } from "@/brand";
 import { cn } from "@/lib/cn";
@@ -40,6 +41,26 @@ const inputClass =
   "w-full border border-paper/15 bg-ink-soft/85 px-4 py-3 font-mono text-[15px] text-paper outline-none placeholder:text-paper-dim/60 focus:border-red";
 
 export const TextInput = (props: ComponentPropsWithoutRef<"input">) => <input {...props} className={cn(inputClass, props.className)} />;
+
+export function PasswordInput({ className, ...props }: Omit<ComponentPropsWithoutRef<"input">, "type">) {
+  const [visible, setVisible] = useState(true);
+  return (
+    <div className="relative min-w-0">
+      <TextInput {...props} type={visible ? "text" : "password"} className={cn("pr-28", className)} />
+      <button
+        type="button"
+        aria-controls={props.id}
+        aria-pressed={visible}
+        aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+        disabled={props.disabled}
+        onClick={() => setVisible((current) => !current)}
+        className="absolute inset-y-1 right-1 cursor-pointer px-3 font-serif text-sm uppercase text-red hover:bg-red hover:text-ink focus-visible:outline-2 focus-visible:outline-red focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {visible ? "Ocultar" : "Mostrar"}
+      </button>
+    </div>
+  );
+}
 
 export const TextArea = (props: ComponentPropsWithoutRef<"textarea">) => (
   <textarea rows={4} {...props} className={cn(inputClass, "resize-none", props.className)} />

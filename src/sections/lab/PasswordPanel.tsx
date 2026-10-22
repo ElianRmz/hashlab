@@ -5,7 +5,7 @@ import { listUsersAction, loginAction, registerAction } from "@/app/actions";
 import type { LoginResult, RegistrationResult } from "@/app/action-types";
 import type { UserView } from "@/app/users";
 import { PASSWORD_ALGOS, type PasswordAlgoId } from "@/hash/algorithms";
-import { Button, Chips, Field, Panel, TextInput, Verdict, type VerdictState } from "./ui";
+import { Button, Chips, Field, Panel, PasswordInput, TextInput, Verdict, type VerdictState } from "./ui";
 import { fieldError, milliseconds, StoredRecord, TaskError, useServerTask } from "./shared";
 
 const options = Object.values(PASSWORD_ALGOS).map((a) => ({ id: a.id, label: a.label, sub: a.param }));
@@ -87,7 +87,7 @@ export function PasswordPanel({ initialUsers }: { initialUsers: UserView[] }) {
             {(describedBy) => <TextInput id="register-username" autoComplete="off" aria-describedby={describedBy} value={username} onChange={(event) => setUsername(event.target.value)} />}
           </Field>
           <Field index="03" label="Contraseña" htmlFor="register-password" error={fieldError(registration.error, "password")}>
-            {(describedBy) => <TextInput id="register-password" type="password" autoComplete="new-password" aria-describedby={describedBy} value={password} onChange={(event) => setPassword(event.target.value)} />}
+            {(describedBy) => <PasswordInput id="register-password" autoComplete="new-password" aria-describedby={describedBy} value={password} onChange={(event) => setPassword(event.target.value)} />}
           </Field>
           <Button tone="solid" disabled={pending} onClick={register} className="self-start">{registration.pending ? "Calculando…" : "Registrar /"}</Button>
         </fieldset>
@@ -106,7 +106,7 @@ export function PasswordPanel({ initialUsers }: { initialUsers: UserView[] }) {
             }} />}
           </Field>
           <Field index="05" label="Contraseña" htmlFor="login-password" error={fieldError(authentication.error, "password")}>
-            {(describedBy) => <TextInput id="login-password" type="password" autoComplete="off" aria-describedby={describedBy} value={attempt} onChange={(event) => {
+            {(describedBy) => <PasswordInput id="login-password" autoComplete="off" aria-describedby={describedBy} value={attempt} onChange={(event) => {
               setAttempt(event.target.value);
               setLogin(null);
             }} placeholder="escribe la contraseña" />}
