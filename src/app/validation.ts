@@ -1,3 +1,4 @@
+// Usa imports relativos .ts porque node --test y next.config.ts cargan este módulo.
 import { DIGEST_ALGOS, PASSWORD_ALGOS, type DigestAlgoId, type PasswordAlgoId } from "../hash/algorithms.ts";
 import { BCRYPT_MAX_PASSWORD_BYTES, RSA_MODULUS_BITS } from "../hash/params.ts";
 import type { ActionError, ActionResult, FieldName } from "./action-types.ts";
@@ -5,15 +6,17 @@ import type { ActionError, ActionResult, FieldName } from "./action-types.ts";
 export const LIMITS = {
   text: { min: 1, max: 100_000 },
   message: { min: 1, max: 10_000 },
-  username: /^[a-zA-Z0-9._-]{3,32}$/,
+  username: { min: 3, max: 32 },
   password: { min: 8, max: 128 },
   bcryptBytes: BCRYPT_MAX_PASSWORD_BYTES,
   fileBytes: { min: 1, max: 5_000_000 },
   signatureBytes: RSA_MODULUS_BITS / 8,
 } as const;
 
+const USERNAME_PATTERN = /^[a-zA-Z0-9._-]+$/;
 const SIGNATURE_CHARS = 4 * Math.ceil(LIMITS.signatureBytes / 3);
-const FILE_MB = LIMITS.fileBytes.max / 1_000_000;
+const FILE_RANGE = `${LIMITS.fileBytes.min} byte a ${LIMITS.fileBytes.max / 1_000_000} MB`;
+export const FILE_HINT = `Elige o arrastra un archivo aquí · ${FILE_RANGE}`;
 
 export type Content = { mode: "text"; text: string } | { mode: "file"; file: File };
 
@@ -52,9 +55,10 @@ export function parseMessage(value: unknown): ActionResult<string> {
 }
 
 export function parseUsername(value: unknown): ActionResult<string> {
-  return typeof value === "string" && LIMITS.username.test(value)
-    ? valid(value)
-    : invalid("username", "Usa de 3 a 32 caracteres: letras, números, punto, guion o guion bajo");
+  const { min, max } = LIMITS.username;
+  const error = `Usa de ${min} a ${max} caracteres: letras, números, punto, guion o guion bajo`;
+  const username = bounded(value, "username", LIMITS.username, error);
+  return username.ok && !USERNAME_PATTERN.test(username.data) ? invalid("username", error) : username;
 }
 
 export function parsePassword(value: unknown): ActionResult<string> {
@@ -88,9 +92,9 @@ export function parseSignature(value: unknown): ActionResult<string> {
 }
 
 export function parseFile(value: unknown): ActionResult<File> {
-  if (!(value instanceof File)) return invalid("file", `Elige un archivo de 1 byte a ${FILE_MB} MB`);
+  if (!(value instanceof File)) return invalid("file", `Elige un archivo de ${FILE_RANGE}`);
   const { min, max } = LIMITS.fileBytes;
-  return value.size >= min && value.size <= max ? valid(value) : invalid("file", `El archivo debe pesar entre 1 byte y ${FILE_MB} MB`);
+  return value.size >= min && value.size <= max ? valid(value) : invalid("file", `El archivo debe pesar de ${FILE_RANGE}`);
 }
 
 export function parseContent(mode: unknown, text: unknown, file: unknown): ActionResult<Content> {

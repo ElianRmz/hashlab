@@ -39,4 +39,6 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 bcryptjs usa CPU en el hilo principal de Node.js durante el hash y la verificación. Puede retrasar otras solicitudes. El suelo de tiempo para los accesos fallidos no elimina ese bloqueo.
 
+sha256crypt cede el hilo cada 1 000 rondas. Esto reduce las pausas, pero sigue usando CPU en el hilo principal y puede aumentar la latencia de otras solicitudes durante un acceso.
+
 Los accesos fallidos tardan al menos 600 ms desde el inicio de la autenticación. Si la verificación supera ese tiempo por carga del servidor, la respuesta tarda más.

@@ -2,7 +2,7 @@
 
 import type { SignResult, VerifyResult } from "@/hash/contract";
 import { digest, sign, verify } from "@/hash/server";
-import type { ActionResult, IntegrityResult, LoginResult, RegistrationResult } from "./action-types";
+import type { ActionError, FieldName, ActionResult, IntegrityResult, LoginResult, RegistrationResult } from "./action-types";
 import { authenticate, register, userViews, type AuthOutcome, type UserView } from "./users";
 import {
   parseContent,
@@ -17,8 +17,8 @@ import {
   type Content,
 } from "./validation";
 
-function fail(error: string): ActionResult<never> {
-  return { ok: false, error };
+function fail(error: string, field?: FieldName): ActionError {
+  return { ok: false, error, field };
 }
 
 async function execute<T>(work: () => T | Promise<T>): Promise<ActionResult<T>> {
@@ -77,7 +77,7 @@ export async function registerAction(form: FormData): Promise<ActionResult<Regis
   if (!password.ok) return password;
   try {
     const registration = await register(username.data, algo.data, password.data);
-    if (registration.kind === "taken") return { ok: false, error: "Este usuario ya está registrado", field: "username" };
+    if (registration.kind === "taken") return fail("Este usuario ya está registrado", "username");
     return { ok: true, data: { hash: registration.hash, username: username.data, users: userViews() } };
   } catch {
     return fail("No se pudo registrar el usuario. Inténtalo de nuevo");

@@ -1,3 +1,4 @@
+// Usa imports relativos .ts porque node --test y next.config.ts cargan este módulo.
 import "server-only";
 import { setTimeout as delay } from "node:timers/promises";
 import type { PasswordAlgoId } from "../hash/algorithms.ts";

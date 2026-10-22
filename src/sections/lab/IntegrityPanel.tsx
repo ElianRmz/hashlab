@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { digestAction } from "@/app/actions";
 import type { IntegrityResult } from "@/app/action-types";
-import { parseFile } from "@/app/validation";
+import { FILE_HINT, parseFile } from "@/app/validation";
 import { DIGEST_ALGOS, type DigestAlgoId } from "@/hash/algorithms";
 import { integrityState, type IntegrityInput, type IntegrityOutcome } from "./integrity-state";
 import { Digest } from "./Digest";
@@ -74,7 +74,7 @@ export function IntegrityPanel() {
                   setOutcome(null);
                   task.setError(null);
                 }} />
-                <p className="break-all font-serif text-sm text-paper-dim">{input.file ? `${input.file.name} · ${input.file.size.toLocaleString("es-MX")} bytes` : "Elige o arrastra un archivo aquí · 1 byte a 5 MB"}</p>
+                <p className="break-all font-serif text-sm text-paper-dim">{input.file ? `${input.file.name} · ${input.file.size.toLocaleString("es-MX")} bytes` : FILE_HINT}</p>
               </>}
             </Field>}
             <div className="flex flex-wrap gap-3">
